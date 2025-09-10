@@ -1,11 +1,35 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
+/* BASE REACT COMPONENT IMPORT */
+import * as React from "react";
+import * as ReactDOM from "react-dom/client";
+import {
+  createBrowserRouter,
+  RouterProvider,
+} from "react-router-dom";
 
+/* CSS IMPORT */
+import './index.css';
+
+/* PAGE COMPONENTS IMPORT */
+import App from './App';
+// BASE COMPONENTS
+import Home from './components/Home.js';
+import Login from './components/Login.js';
+import Register from './components/Register.js';
+import Navbar from "./components/Navbar.js";
+import Footer from "./components/Footer.js";
+import reportWebVitals from './reportWebVitals';
+// PAGES COMPONENTS
+import Cogtri from './components/pages/Cogtri.js';
+import Grapes from './components/pages/Grapes.js';
+import Learnmore from './components/pages/Learnmore.js'
+import Settings from "./components/pages/Settings.js";
+import Tipp from "./components/pages/Tipp.js";
+import Dev from "./components/pages/Dev.js";
+
+/* ROUTE(S) */
 const router = createBrowserRouter([
-  // Client-Side Routes
+  
+  /* CLIENT SIDE ROUTE(S) */
   {
     path: "/",
     element: 
@@ -29,34 +53,11 @@ const router = createBrowserRouter([
     ],
   },
 
-  // 🔒 Separate Login Route (NOT Protected)
-  {
-    path: "/admin/login",
-    element: <Login />, // Public login page
-  },
 
-  // 🔒 Protected Admin Routes (Requires Auth)
-  {
-    path: "/admin",
-    element: (
-      <ProtectedLayout>  {/* Now only protects admin pages */}
-        <App />
-      </ProtectedLayout>
-    ),
-    children: [
-      { index: true, element: <Dashboard /> },
-      { path: "scholar-list", element: <ScholarList /> },
-      { path: "scholar-list/add", element: <AddScholar /> },
-      { path: "scholar-list/edit/:id", element: <EditScholar /> },
-      { path: "scholarship-list", element: <ScholarshipList /> },
-      { path: "scholarship-list/add", element: <AddScholarship /> },
-      { path: "scholarship-list/edit/:id", element: <EditScholarship /> },
-    ],
-  },
-
+  /* DEV ROUTE */
   {
     path: "/dev",
-    element: <Dev />, // dev test page
+    element: <Dev />,
   },
 
 ]);
