@@ -3,7 +3,11 @@ import React from 'react'
 const Home = () => {
   return (
     <div>
-      This is the home page
+
+    <div className='text-3xl'>
+      Welcome back, Piqim!
+    </div>
+
     </div>
   )
 }

@@ -1,9 +1,9 @@
-import logo from './logo.svg';
 import './App.css';
 
 import { Outlet, useLocation } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import Navbar from "./components/Navbar.tsx";
+import Footer from "./components/Footer.tsx";
+
 
 const App = () => {
   const location = useLocation();
