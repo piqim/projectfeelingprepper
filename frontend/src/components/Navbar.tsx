@@ -62,7 +62,7 @@ const Navbar = () => {
         <div className="flex justify-end p-4">
           <button
             onClick={() => setIsOpen(false)}
-            className="text-2xl font-bold text-gray-600"
+            className="text-2xl absolute font-bold text-gray-600"
           >
             ×
           </button>
@@ -108,22 +108,21 @@ const Navbar = () => {
 
               {/* Extra: user routes */}
               <Link to="/user/login" onClick={() => setIsOpen(false)}>
-                Login
+                Login*
               </Link>
               <Link to="/user/register" onClick={() => setIsOpen(false)}>
-                Register
+                Register*
               </Link>
-            </div>
-          </div>
 
-          {/* Logout pinned at bottom */}
-          <div className="border-t pt-4">
-            <button
-              onClick={handleLogout}
-              className="text-red-500 font-medium"
-            >
-              Logout
-            </button>
+              <div className="border-t pt-4">
+                <button
+                  onClick={handleLogout}
+                  className="text-red-500 font-medium"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
