@@ -1,5 +1,3 @@
-import { Link } from "react-router-dom";
-
 const Learnmore = () => {
   return (
     <div className="max-h-screen bg-gray-50 p-4 flex flex-col gap-4">
