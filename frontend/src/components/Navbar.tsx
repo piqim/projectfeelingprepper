@@ -18,7 +18,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top Navbar */}
-      <nav className="w-full bg-white shadow px-4 py-3 flex items-center justify-between">
+      <nav className="w-full bg-dark shadow px-4 py-3 flex items-center justify-between">
         {/* Burger + Logo */}
         <div className="flex items-center gap-3">
           {/* Burger button */}
@@ -27,17 +27,17 @@ const Navbar = () => {
             className="flex flex-col justify-center items-center w-8 h-8"
           >
             <span
-              className={`h-0.5 w-6 bg-black rounded transition-all duration-300 ${
+              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${
                 isOpen ? "rotate-45 translate-y-1.5" : ""
               }`}
             />
             <span
-              className={`h-0.5 w-6 bg-black rounded my-1 transition-all duration-300 ${
+              className={`h-0.5 w-6 bg-highlight rounded my-1 transition-all duration-300 ${
                 isOpen ? "opacity-0" : ""
               }`}
             />
             <span
-              className={`h-0.5 w-6 bg-black rounded transition-all duration-300 ${
+              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${
                 isOpen ? "-rotate-45 -translate-y-1.5" : ""
               }`}
             />
@@ -45,7 +45,7 @@ const Navbar = () => {
 
           {/* Logo / Title */}
           <div className="text-lg font-bold">
-            <Link to="/" className="hover:text-gray-700">
+            <Link to="/" className="hover:text-neutral text-highlight">
               FeelingPrepper
             </Link>
           </div>
@@ -54,7 +54,7 @@ const Navbar = () => {
 
       {/* Sidebar / Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-full bg-white z-50 transform transition-transform duration-300 ${
+        className={`fixed top-0 left-0 h-full w-full bg-dark z-50 transform transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

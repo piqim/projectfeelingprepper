@@ -1,13 +1,34 @@
 /* IMPORT TAILWIND BASE FILE */ @import "tailwindcss";
 
+/* App main color palette */
+@theme {
+  --color-primary-base: #0281A7;
+  --color-primary-light: #02AFB9;
+  --color-secondary: #D4A7E1;
+  --color-accent-1: #F86E2E;
+  --color-accent-2: #FCE18D;
+  --color-accent-3: #A7CC81;
+  --color-dark: #222089;
+  --color-neutral: #F6F0E5;
+  --color-highlight: #FDFDFD;
+}
+
 /* Custom root styles */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-
+  font-family: "Plus Jakarta Sans", sans-serif;
   color-scheme: light;
-  background-color: #f9fafb; /* Use a light gray instead of dark for app */
+  background-color: #F6F0E5; /* Use a light gray instead of dark for app */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.welcome {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.montserrat-alternates {
+  font-family: "Montserrat Alternates", sans-serif;
+
 }
