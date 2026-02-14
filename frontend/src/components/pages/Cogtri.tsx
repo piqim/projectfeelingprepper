@@ -1,4 +1,5 @@
 import { useState } from "react";
+import instructionsImg from "../../assets/instructions.jpg";
 
 interface CogTriEntry {
   _id?: string;
@@ -315,7 +316,7 @@ const Cogtri = () => {
             </div>
             {/* Right side - Placeholder for illustration */}
             <div className="flex-1 rounded-lg flex items-baseline justify-center min-h-[200px]">
-              <img src="/src/assets/instructions.jpg" alt="Instructions Illustration" className="max-w-full max-h-full" />
+              <img src={instructionsImg} alt="Instructions Illustration" className="max-w-full max-h-full" />
             </div>
           </div>
         </div>
