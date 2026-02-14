@@ -53,11 +53,9 @@ const Home = () => {
     // Check if user is logged in (userId stored in localStorage) 
     const userId = localStorage.getItem("userId");
 
-
     if (!userId) {
-      // User not logged in - redirect to login
-      alert("You must be logged in to access this page.");
-      navigate("/user/login");
+      // User not logged in - this shouldn't happen due to ProtectedRoute
+      // but handle gracefully just in case
       return;
     }
 

@@ -12,6 +12,8 @@ import App from "./App";
 import Home from "./components/Home.tsx";
 import Login from "./components/Login.tsx";
 import Register from "./components/Register.tsx";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
+import PublicRoute from "./components/PublicRoute.tsx";
 // PAGES COMPONENTS
 import Cogtri from "./components/pages/Cogtri.tsx";
 import Grapes from "./components/pages/Grapes.tsx";
@@ -25,7 +27,11 @@ const router = createBrowserRouter([
   /* CLIENT SIDE ROUTE(S) */
   {
     path: "/",
-    element: <App />,
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
     children: [
       { index: true, element: <Home /> },
 
@@ -56,11 +62,29 @@ const router = createBrowserRouter([
     children: [
       {
         path: "login",
-        children: [{ index: true, element: <Login /> }],
+        children: [
+          {
+            index: true,
+            element: (
+              <PublicRoute>
+                <Login />
+              </PublicRoute>
+            ),
+          },
+        ],
       },
       {
         path: "register",
-        children: [{ index: true, element: <Register /> }],
+        children: [
+          {
+            index: true,
+            element: (
+              <PublicRoute>
+                <Register />
+              </PublicRoute>
+            ),
+          },
+        ],
       },
     ],
   },
@@ -68,7 +92,11 @@ const router = createBrowserRouter([
   /* SETTINGS ROUTE */
   {
     path: "/settings",
-    element: <App/>,
+    element: (
+      <ProtectedRoute>
+        <App />
+      </ProtectedRoute>
+    ),
     children: [{ index: true, element: <Settings /> }],
   },
 
