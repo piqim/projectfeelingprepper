@@ -6,7 +6,7 @@ import Footer from "./components/Footer.tsx";
 const App = () => {
 
   return (
-    <div className="mx-auto shadow-sm min-h-full max-w-md">
+    <div className="shadow-lg h-[930px] w-[430px] bg-neutral">
       <Navbar />
       <Outlet />
       <Footer />

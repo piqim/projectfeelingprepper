@@ -17,7 +17,7 @@
 :root {
   font-family: "Plus Jakarta Sans", sans-serif;
   color-scheme: light;
-  background-color: #F6F0E5; /* Use a light gray instead of dark for app */
+  background-color: #FDFDFD; /* Use a light gray instead of dark for app */
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;

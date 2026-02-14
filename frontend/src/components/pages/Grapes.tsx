@@ -1,7 +1,22 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+interface GrapesEntry {
+  _id?: string;
+  date: string;
+  gentle: string;
+  recreation: string;
+  accomplishment: string;
+  pleasure: string;
+  exercise: string;
+  social: string;
+  completed: boolean;
+}
 
 const Grapes = () => {
-  // State for each GRAPES entry
+  const navigate = useNavigate();
+  
+  // State for current entries (one input per category)
   const [entries, setEntries] = useState({
     gentle: "",
     recreation: "",
@@ -11,169 +26,536 @@ const Grapes = () => {
     social: "",
   });
 
-  // Calendar modal state
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  // Modal states
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<GrapesEntry | null>(null);
 
-  // Placeholder calendar entries
-  const placeholderEntries: Record<number, string[]> = {
-    3: [
-      "Gentle: Took a nap",
-      "Recreation: Played guitar 🎸",
-      "Accomplishment: Finished homework on algebra and helped a classmate",
-    ],
-    5: ["Exercise: Yoga", "Pleasure: Ate favorite snack 🍫"],
-  };
+  // Placeholder history data (will be fetched from MongoDB)
+  const [historyEntries] = useState<GrapesEntry[]>([
+    {
+      _id: "1",
+      date: "2025-02-10",
+      gentle: "Took a nap",
+      recreation: "Played guitar 🎸",
+      accomplishment: "Finished homework",
+      pleasure: "Ate favorite snack 🍫",
+      exercise: "Yoga",
+      social: "Called a friend",
+      completed: true,
+    },
+    {
+      _id: "2",
+      date: "2025-02-09",
+      gentle: "Read a book",
+      recreation: "Watched a movie",
+      accomplishment: "Cleaned my room",
+      pleasure: "Listened to music",
+      exercise: "Went for a walk",
+      social: "Had dinner with family",
+      completed: true,
+    },
+  ]);
 
   // Handlers
-  const handleInputChange = (key: keyof typeof entries, value: string) => {
-    setEntries({ ...entries, [key]: value });
+  const handleInputChange = (
+    category: keyof typeof entries,
+    value: string
+  ) => {
+    setEntries({ ...entries, [category]: value });
   };
 
-  const handleSave = () => {
-    console.log("Saving entries:", { entries });
-    // TODO: Send to backend
+  const handleSaveClick = () => {
+    // Check if at least one field is filled
+    const hasContent = Object.values(entries).some((val) => val.trim() !== "");
+    if (!hasContent) {
+      alert("Please fill in at least one activity before saving.");
+      return;
+    }
+    setShowSaveModal(true);
   };
 
-  const handleDayClick = (day: number) => {
-    setSelectedDay(day);
-    setIsModalOpen(true);
+  const handleConfirmSave = async (completed: boolean) => {
+    // Prepare data for MongoDB
+    const dataToSave: Omit<GrapesEntry, "_id"> = {
+      date: new Date().toISOString().split("T")[0],
+      gentle: entries.gentle,
+      recreation: entries.recreation,
+      accomplishment: entries.accomplishment,
+      pleasure: entries.pleasure,
+      exercise: entries.exercise,
+      social: entries.social,
+      completed,
+    };
+
+    console.log("Saving to MongoDB:", dataToSave);
+
+    // TODO: API call to save to MongoDB
+    // try {
+    //   const response = await fetch('/api/grapes', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //     body: JSON.stringify(dataToSave),
+    //   });
+    //   const result = await response.json();
+    //   console.log('Saved:', result);
+    // } catch (error) {
+    //   console.error('Error saving:', error);
+    // }
+
+    // Clear form after save
+    setEntries({
+      gentle: "",
+      recreation: "",
+      accomplishment: "",
+      pleasure: "",
+      exercise: "",
+      social: "",
+    });
+    setShowSaveModal(false);
+    alert("Entry saved successfully!");
   };
 
-  const toggleExpand = (index: number) => {
-    setExpanded((prev) => ({ ...prev, [index]: !prev[index] }));
+  const handleViewHistory = () => {
+    setShowHistoryModal(true);
+    // TODO: Fetch history from MongoDB
+    // fetch('/api/grapes/history')
+    //   .then(res => res.json())
+    //   .then(data => setHistoryEntries(data));
+  };
+
+  const handleHistoryEntryClick = (entry: GrapesEntry) => {
+    setSelectedHistoryEntry(entry);
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
-      setIsModalOpen(false);
+      setShowSaveModal(false);
+      setShowHistoryModal(false);
+      setSelectedHistoryEntry(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className=" bg-highlight pb-10">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">GRAPES (Daily Tracker)</h1>
+      <div className="px-6 pt-6 pb-4">
+        <h1 className="text-dark text-3xl font-bold text-center montserrat-alternates">
+          GRAPES (Daily Tracker)
+        </h1>
+        <div className="w-full h-1 bg-dark mt-2"></div>
       </div>
 
-      {/* GRAPES Form */}
-      <div className="space-y-4 bg-white p-4 rounded-lg shadow">
-        {([
-          { key: "gentle", label: "G: Gentle to Self" },
-          { key: "recreation", label: "R: Recreation" },
-          { key: "accomplishment", label: "A: Accomplishment" },
-          { key: "pleasure", label: "P: Pleasure" },
-          { key: "exercise", label: "E: Exercise" },
-          { key: "social", label: "S: Social" },
-        ] as const).map(({ key, label }) => (
-          <div key={key} className="flex flex-col">
-            <label className="mb-1 font-medium">{label}</label>
-            <input
-              type="text"
-              value={entries[key]}
-              onChange={(e) => handleInputChange(key, e.target.value)}
-              placeholder={`Enter your ${label} activity`}
-              className="border px-2 py-1 rounded w-full"
-            />
+      {/* Grape Vine Container */}
+      <div className="relative px-2 mt-2 rounded-2xl bg-neutral" style={{ minHeight: "700px" }}>
+        {/* SVG Tree Structure */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          viewBox="0 0 400 700"
+          style={{ zIndex: 0 }}
+        >
+          {/* Tree trunk/branches */}
+          <path
+            d="M 240 650 Q 50 550, 180 450 Q 150 390, 120 280 Q 100 280, 120 100"
+            stroke="#0281A7"
+            strokeWidth="12"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 80 470 Q 200 300, 240 340 Q 270 310, 300 300"
+            stroke="#0281A7"
+            strokeWidth="10"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 160 280 Q 20 300, 350 90 Q 300 310"
+            stroke="#0281A7"
+            strokeWidth="10"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 240 350 Q 260 300, 280 250"
+            stroke="#0281A7"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 140 450 Q 50 400, 290 500"
+            stroke="#0281A7"
+            strokeWidth="8"
+            fill="none"
+            strokeLinecap="round"
+          />
+          
+          {/* Leaves */}
+          <ellipse cx="200" cy="620" rx="50" ry="35" fill="#A7CC81" opacity="0.7" />
+          <ellipse cx="240" cy="640" rx="45" ry="32" fill="#A7CC81" opacity="0.8" />
+          <ellipse cx="210" cy="660" rx="40" ry="28" fill="#A7CC81" opacity="0.9" />
+        </svg>
+
+        {/* Grape Circles with Inputs */}
+        {/* G - Gentle (Top Left) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            left: "9%",
+            top: "1%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">G</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Gentle-to-Self 
           </div>
-        ))}
+          <input
+            type="text"
+            value={entries.gentle}
+            onChange={(e) => handleInputChange("gentle", e.target.value)}
+            placeholder="ie. comforting self"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
+
+        {/* R - Recreation (Top Right) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            right: "10%",
+            top: "7.5%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">R</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Recreation 
+          </div>
+          <input
+            type="text"
+            value={entries.recreation}
+            onChange={(e) => handleInputChange("recreation", e.target.value)}
+            placeholder="ie. example"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
+
+        {/* A - Accomplishment (Middle Left) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            left: "7.5%",
+            top: "27.5%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">A</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Accomplishment 
+          </div>
+          <input
+            type="text"
+            value={entries.accomplishment}
+            onChange={(e) =>
+              handleInputChange("accomplishment", e.target.value)
+            }
+            placeholder="ie. example"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
+
+        {/* P - Pleasure (Middle Right) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            right: "5%",
+            top: "32.5%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">P</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Pleasure 
+          </div>
+          <input
+            type="text"
+            value={entries.pleasure}
+            onChange={(e) => handleInputChange("pleasure", e.target.value)}
+            placeholder="ie. example"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
+
+        {/* E - Exercise (Bottom Left) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            left: "15%",
+            top: "52.5%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">E</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Exercise 
+          </div>
+          <input
+            type="text"
+            value={entries.exercise}
+            onChange={(e) => handleInputChange("exercise", e.target.value)}
+            placeholder="ie. example"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
+
+        {/* S - Social (Bottom Right) */}
+        <div
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          style={{
+            width: "170px",
+            height: "170px",
+            right: "2.5%",
+            top: "60%",
+            zIndex: 10,
+          }}
+        >
+          <div className="text-4xl font-bold text-dark mb-1">S</div>
+          <div className="text-xs text-dark font-semibold text-center mb-3">
+            Social 
+          </div>
+          <input
+            type="text"
+            value={entries.social}
+            onChange={(e) => handleInputChange("social", e.target.value)}
+            placeholder="ie. example"
+            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+          />
+        </div>
       </div>
 
-      {/* Save Button */}
-      <div className="mt-6">
+      {/* Action Buttons */}
+      <div className="px-6 mt-8 flex gap-4">
         <button
-          onClick={handleSave}
-          className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+          onClick={handleSaveClick}
+          className="flex-1 bg-primary-light text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
         >
           Save Entry
         </button>
+        <button
+          onClick={handleViewHistory}
+          className="flex-1 bg-primary-light text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
+        >
+          See History
+        </button>
       </div>
 
-      {/* Calendar */}
-      <div className="mt-6 bg-white p-4 rounded-lg shadow">
-        <h2 className="font-medium mb-3">Calendar View</h2>
-        <div className="grid grid-cols-7 text-center text-sm font-medium">
-          <span>Su</span>
-          <span>Mo</span>
-          <span>Tu</span>
-          <span>We</span>
-          <span>Th</span>
-          <span>Fr</span>
-          <span>Sa</span>
-        </div>
-        <div className="grid grid-cols-7 text-center mt-2 gap-y-2">
-          {[...Array(28)].map((_, i) => {
-            const day = i + 1;
-            const hasEntry = placeholderEntries[day];
-            return (
-              <button
-                key={day}
-                onClick={() => handleDayClick(day)}
-                className={`p-1 rounded ${
-                  hasEntry
-                    ? "bg-blue-100 text-blue-600"
-                    : "hover:bg-gray-200"
-                }`}
-              >
-                {day}
-              </button>
-            );
-          })}
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          (• = completed, o = partial)
-        </p>
-      </div>
-
-      {/* Modal */}
-      {isModalOpen && selectedDay && (
+      {/* Save Confirmation Modal */}
+      {showSaveModal && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white p-6 rounded-lg shadow-lg w-80 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Entries for Day {selectedDay}</h2>
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h2 className="text-xl font-bold text-dark mb-4">
+              Have you completed all activities?
+            </h2>
+            <p className="text-gray-600 mb-6 text-sm">
+              Mark this entry as completed if you've finished all your planned
+              GRAPES activities for today.
+            </p>
+            <div className="flex gap-3">
               <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-xl font-bold text-gray-600"
+                onClick={() => setShowSaveModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
               >
-                ×
+                Not Yet
+              </button>
+              <button
+                onClick={() => handleConfirmSave(true)}
+                className="flex-1 bg-accent-3 text-white font-semibold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+              >
+                Completed ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && !selectedHistoryEntry && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={handleOverlayClick}
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-dark">Entry History</h2>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
               </button>
             </div>
 
-            {placeholderEntries[selectedDay] ? (
-              <ul className="space-y-3">
-                {placeholderEntries[selectedDay].map((entry, index) => {
-                  const isLong = entry.length > 25;
-                  const isExpanded = expanded[index] || false;
-                  return (
-                    <li
-                      key={index}
-                      className="flex items-start justify-between bg-gray-100 px-3 py-2 rounded"
-                    >
-                      <span className="flex-1">
-                        {isLong && !isExpanded
-                          ? entry.slice(0, 25) + "..."
-                          : entry}
-                      </span>
-                      {isLong && (
-                        <button
-                          onClick={() => toggleExpand(index)}
-                          className="ml-2 text-blue-500 text-sm"
-                        >
-                          {isExpanded ? "Collapse" : "Expand"}
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+            {historyEntries.length === 0 ? (
+              <p className="text-gray-500 text-center py-8">
+                No history entries yet. Start tracking your GRAPES activities!
+              </p>
             ) : (
-              <p className="text-gray-500">No entries for this day.</p>
+              <div className="space-y-3">
+                {historyEntries.map((entry) => (
+                  <button
+                    key={entry._id}
+                    onClick={() => handleHistoryEntryClick(entry)}
+                    className="w-full bg-secondary/20 hover:bg-secondary/30 rounded-lg p-4 text-left transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-dark">
+                          {new Date(entry.date).toLocaleDateString("en-US", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
+                          {Object.entries(entry).filter(
+                            ([key, value]) =>
+                              key !== "_id" &&
+                              key !== "date" &&
+                              key !== "completed" &&
+                              typeof value === "string" &&
+                              value.trim() !== ""
+                          ).length}{" "}
+                          activities logged
+                        </div>
+                      </div>
+                      <div>
+                        {entry.completed ? (
+                          <span className="bg-accent-3 text-white text-xs px-2 py-1 rounded-full">
+                            ✓ Complete
+                          </span>
+                        ) : (
+                          <span className="bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded-full">
+                            Partial
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* History Detail Modal */}
+      {selectedHistoryEntry && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={handleOverlayClick}
+        >
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-dark">
+                {new Date(selectedHistoryEntry.date).toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  }
+                )}
+              </h2>
+              <button
+                onClick={() => setSelectedHistoryEntry(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {[
+                { key: "gentle", label: "Gentle-to-Self", color: "bg-secondary" },
+                { key: "recreation", label: "Recreation", color: "bg-secondary" },
+                {
+                  key: "accomplishment",
+                  label: "Accomplishment",
+                  color: "bg-secondary",
+                },
+                { key: "pleasure", label: "Pleasure", color: "bg-secondary" },
+                { key: "exercise", label: "Exercise", color: "bg-secondary" },
+                { key: "social", label: "Social", color: "bg-secondary" },
+              ].map(({ key, label, color }) => {
+                const activity =
+                  selectedHistoryEntry[key as keyof Omit<GrapesEntry, "_id" | "date" | "completed">];
+                return (
+                  <div key={key}>
+                    <div className="font-bold text-dark mb-2">
+                      {label}
+                    </div>
+                    {activity && activity.trim() !== "" ? (
+                      <div className={`${color}/20 px-3 py-2 rounded-lg text-sm`}>
+                        {activity}
+                      </div>
+                    ) : (
+                      <p className="text-gray-400 text-sm italic">
+                        No activity recorded
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 pt-4 border-t">
+              <button
+                onClick={() => setSelectedHistoryEntry(null)}
+                className="w-full bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
