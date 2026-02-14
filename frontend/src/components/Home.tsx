@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import config from "../config";
 
 interface User {
   _id: string;
@@ -42,8 +43,8 @@ const Home = () => {
   const [latestGrapes, setLatestGrapes] = useState<GrapesEntry | null>(null);
   const [latestCogTri, setLatestCogTri] = useState<CogTriEntry | null>(null);
 
-  // API URL - update this to match your backend
-  const API_URL = "http://localhost:5050";
+  // API URL from config
+  const API_URL = config.API_URL;
 
   useEffect(() => {
     checkAuthAndFetchData();

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import config from "../config";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const API_URL = "http://localhost:5050";
+  const API_URL = config.API_URL;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({

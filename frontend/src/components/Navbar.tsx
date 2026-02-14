@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
+import config from "../config";
 
 interface User {
   _id: string;
@@ -14,8 +15,8 @@ const Navbar = () => {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
 
-  // API base URL - update this to your server URL
-  const API_URL = "http://localhost:5050";
+  // API base URL from config
+  const API_URL = config.API_URL;
 
   // Check if current page is login or register
   const isAuthPage = location.pathname === "/user/login" || location.pathname === "/user/register";

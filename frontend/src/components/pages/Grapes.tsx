@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import config from "../../config";
 
 interface GrapesEntry {
   _id?: string;
@@ -13,8 +14,8 @@ interface GrapesEntry {
 }
 
 const Grapes = () => {
-  // API URL
-  const API_URL = "http://localhost:5050";
+  // API URL from config
+  const API_URL = config.API_URL;
 
   // State for current entries (one input per category)
   const [entries, setEntries] = useState({

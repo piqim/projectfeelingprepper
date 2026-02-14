@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import config from "../../config";
 import instructionsImg from "../../assets/instructions.jpg";
 
 interface CogTriEntry {
@@ -12,8 +13,8 @@ interface CogTriEntry {
 }
 
 const Cogtri = () => {
-  // API URL
-  const API_URL = "http://localhost:5050";
+  // API URL from config
+  const API_URL = config.API_URL;
 
   // State for current entry
   const [entry, setEntry] = useState({

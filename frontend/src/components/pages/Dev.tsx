@@ -1,4 +1,5 @@
 import { useState } from "react";
+import config from "../../config";
 
 interface User {
   _id: string;
@@ -60,8 +61,8 @@ const Dev = () => {
   const [expandedGrapes, setExpandedGrapes] = useState<string | null>(null);
   const [expandedCogtri, setExpandedCogtri] = useState<string | null>(null);
 
-  // API base URL - update this to your server URL
-  const API_URL = "http://localhost:5050"; // Change this to your backend URL
+  // API base URL from config
+  const API_URL = config.API_URL;
 
   // Test connection to server
   const testConnection = async () => {
