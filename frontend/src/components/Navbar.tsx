@@ -1,24 +1,82 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+
+interface User {
+  _id: string;
+  username: string;
+  email: string;
+  streak: number;
+}
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+
+  // API base URL - update this to your server URL
+  const API_URL = "http://localhost:5050";
+
+  // Check if current page is login or register
+  const isAuthPage = location.pathname === "/user/login" || location.pathname === "/user/register";
+
+  useEffect(() => {
+    if (isAuthPage) {
+      return;
+    }
+
+    fetchCurrentUser();
+  }, [isAuthPage, location.pathname]);
+
+  // Fetch current user data
+  const fetchCurrentUser = async () => {
+    const userId = localStorage.getItem("userId");
+
+    if (!userId) {
+      // User not logged in
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/users/${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        setUser(data);
+      } else {
+        console.error("Failed to fetch user data");
+      }
+    } catch (error) {
+      console.error("Error fetching user:", error);
+    }
+  };
 
   const handleLogout = () => {
     setIsOpen(false);
 
-    // TODO: clear auth/session state here if needed
+    // Clear auth/session state
+    localStorage.removeItem("userId");
+    setUser(null);
     console.log("Logout clicked");
 
     // Navigate to login page
     navigate("/user/login");
   };
 
+  // Get user's initial (first letter of username)
+  const getUserInitial = () => {
+    if (!user || !user.username) return "?";
+    return user.username.charAt(0).toUpperCase();
+  };
+
+  // Hide navbar entirely on auth pages
+  if (isAuthPage) {
+    return null;
+  }
+
   return (
     <>
       {/* Top Navbar */}
-      <nav className="w-full bg-dark shadow-md px-4 py-3 flex items-center justify-between">
+      <nav className="w-full h-14 bg-dark shadow-md px-4 py-3 flex items-center justify-between">
         {/* Burger + Logo */}
         <div className="flex items-center gap-3">
           {/* Burger button */}
@@ -28,25 +86,25 @@ const Navbar = () => {
             aria-label="Toggle menu"
           >
             <span
-              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${
-                isOpen ? "rotate-45 translate-y-1.5" : ""
-              }`}
+              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-1.5" : ""
+                }`}
             />
             <span
-              className={`h-0.5 w-6 bg-highlight rounded my-1 transition-all duration-300 ${
-                isOpen ? "opacity-0" : ""
-              }`}
+              className={`h-0.5 w-6 bg-highlight rounded my-1 transition-all duration-300 ${isOpen ? "opacity-0" : ""
+                }`}
             />
             <span
-              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${
-                isOpen ? "-rotate-45 -translate-y-1.5" : ""
-              }`}
+              className={`h-0.5 w-6 bg-highlight rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-1.5" : ""
+                }`}
             />
           </button>
 
           {/* Logo / Title */}
           <div className="text-xl font-bold montserrat-alternates">
-            <Link to="/" className="hover:text-accent-2 text-highlight transition-colors duration-200">
+            <Link
+              to="/"
+              className="hover:text-accent-2 text-highlight transition-colors duration-200"
+            >
               FeelingPrepper
             </Link>
           </div>
@@ -63,13 +121,14 @@ const Navbar = () => {
 
       {/* Sidebar / Drawer */}
       <div
-        className={`fixed top-0 left-0 h-full w-[85%] max-w-sm bg-neutral z-50 transform transition-transform duration-300 ease-in-out shadow-2xl ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed top-0 left-0 h-full w-[85%] max-w-sm bg-neutral z-50 transform transition-transform duration-300 ease-in-out shadow-2xl ${isOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         {/* Header with Close button */}
         <div className="bg-dark px-6 py-4 flex items-center justify-between">
-          <h2 className="text-highlight text-xl font-bold montserrat-alternates">Menu</h2>
+          <h2 className="text-highlight text-xl font-bold montserrat-alternates">
+            Menu
+          </h2>
           <button
             onClick={() => setIsOpen(false)}
             className="text-highlight hover:text-accent-2 transition-colors duration-200"
@@ -96,13 +155,19 @@ const Navbar = () => {
           {/* Profile section */}
           <div className="bg-primary-light/10 px-6 py-6 border-b-2 border-primary-light/20">
             <div className="flex items-center gap-4">
-              {/* Profile Avatar */}
+              {/* Profile Avatar with Initial */}
               <div className="w-16 h-16 bg-gradient-to-br from-primary-base to-primary-light rounded-full flex items-center justify-center shadow-md">
-                <span className="text-2xl font-bold text-highlight">P</span>
+                <span className="text-2xl font-bold text-highlight">
+                  {getUserInitial()}
+                </span>
               </div>
               <div>
-                <p className="font-bold text-lg text-dark">Piqim</p>
-                <p className="text-sm text-gray-600">User Profile</p>
+                <p className="font-bold text-lg text-dark">
+                  {user?.username || "Guest"}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {user ? "User Profile" : "Not logged in"}
+                </p>
               </div>
             </div>
           </div>
@@ -218,16 +283,24 @@ const Navbar = () => {
                   d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              Settings
+              Settings<p className="text-red-400">Coming Soon!</p>
             </Link>
 
             {/* Divider */}
             <div className="border-t-2 border-gray-300 my-4"></div>
 
-            {/* Development Links (can remove later) */}
-            <p className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
+            {/* Development Links (can remove later => set to hidden for now) */}
+            <div className="hidden">
+              <p className="px-4 py-2 text-xs font-bold text-gray-400 uppercase tracking-wider">
               Dev Links
             </p>
+            <Link
+              to="/dev"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 rounded-lg hover:bg-gray-200 text-gray-600 text-sm font-medium transition-all duration-200"
+            >
+              Dev Panel*
+            </Link>
             <Link
               to="/user/login"
               onClick={() => setIsOpen(false)}
@@ -242,6 +315,8 @@ const Navbar = () => {
             >
               Register*
             </Link>
+            </div>
+            
           </div>
 
           {/* Bottom section with Logout */}

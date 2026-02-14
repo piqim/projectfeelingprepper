@@ -27,9 +27,18 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-h-screen bg-gray-50 p-6 flex flex-col gap-4">
+    <div className="min-h-[930px] bg-neutral p-6 flex flex-col gap-4 relative">
+      {/* Coming Soon Veil */}
+      <div className="absolute inset-0 bg-dark/60 flex items-center justify-center z-10 select-none">
+        <div className="text-center">
+          <p className="text-white text-4xl font-bold montserrat-alternates tracking-wider">
+            Coming Soon!
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="bg-red-200 shadow rounded-xl p-4 text-center">
+      <div className="bg-gray-400 shadow rounded-xl p-4 text-center">
         <h1 className="text-xl font-semibold">Settings ⚙️</h1>
       </div>
 
@@ -152,11 +161,12 @@ const Settings = () => {
         <button
           type="button"
           onClick={handleLogout}
-          className="px-5 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-medium"
+          className="px-5 py-2 bg-red-500 text-gray-700 rounded-lg hover:bg-red-200 font-medium"
         >
           Log Out
         </button>
       </div>
+
     </div>
   );
 };

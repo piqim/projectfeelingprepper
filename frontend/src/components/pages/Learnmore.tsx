@@ -204,29 +204,11 @@ const Learnmore = () => {
                   Sen Chan
                 </h3>
                 <p className="text-md font-medium text-gray-600 mb-2">
-                  UI/UX Designer - Interface Design & User Experience
+                  Lead UI Designer - Interface Design & User Experience
                 </p>
-                <a
-                  href="https://www.linkedin.com/in/sen-chan"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-primary-light text-sm font-semibold hover:text-primary-base transition-colors"
-                >
-                  LinkedIn
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
-                </a>
+                <p className="text-sm font-semibold text-gray-600 mb-2">
+                  Link Unavailable
+                </p>
               </div>
               <div className="bg-secondary/20 rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
                 <span className="text-2xl">🎨</span>
@@ -239,7 +221,7 @@ const Learnmore = () => {
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-dark mb-1">
-                  Fatihah Burhanuddin
+                  Fatihah Binti Burhanuddin
                 </h3>
                 <p className="text-md font-medium text-gray-600 mb-2">
                   UI Art Designer - Pet Character Design & Visual Assets
@@ -263,10 +245,10 @@ const Learnmore = () => {
                   Jessica Li
                 </h3>
                 <p className="text-md font-medium text-gray-600 mb-2">
-                  Consultant - CBT Framework & Mental Health Content
+                  Psychology Background Researcher - CBT Framework
                 </p>
                 <a
-                  href="https://www.linkedin.com/in/jessicaleepsychology/"
+                  href="https://www.linkedin.com/in/jessicali2005/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-primary-light text-sm font-semibold hover:text-primary-base transition-colors"
@@ -301,7 +283,7 @@ const Learnmore = () => {
                   Jaynie Schnell
                 </h3>
                 <p className="text-md font-medium text-gray-600 mb-2">
-                  Clinical Psychology Researcher - User Mental Health Needs
+                  Clinical Psychology Researcher - Mental Health Content
                 </p>
                 <a
                   href="https://linkedin.com/in/jaynie-schnell-b88014240"

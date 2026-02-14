@@ -1,5 +1,4 @@
-import { useState } from "react";
-//import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 interface GrapesEntry {
   _id?: string;
@@ -14,8 +13,9 @@ interface GrapesEntry {
 }
 
 const Grapes = () => {
-  //const navigate = useNavigate();
-  
+  // API URL
+  const API_URL = "http://localhost:5050";
+
   // State for current entries (one input per category)
   const [entries, setEntries] = useState({
     gentle: "",
@@ -30,32 +30,49 @@ const Grapes = () => {
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<GrapesEntry | null>(null);
+  const [isFullyFilled, setIsFullyFilled] = useState(false);
 
-  // Placeholder history data (will be fetched from MongoDB)
-  const [historyEntries] = useState<GrapesEntry[]>([
-    {
-      _id: "1",
-      date: "2025-02-10",
-      gentle: "Took a nap",
-      recreation: "Played guitar 🎸",
-      accomplishment: "Finished homework",
-      pleasure: "Ate favorite snack 🍫",
-      exercise: "Yoga",
-      social: "Called a friend",
-      completed: true,
-    },
-    {
-      _id: "2",
-      date: "2025-02-09",
-      gentle: "Read a book",
-      recreation: "Watched a movie",
-      accomplishment: "Cleaned my room",
-      pleasure: "Listened to music",
-      exercise: "Went for a walk",
-      social: "Had dinner with family",
-      completed: true,
-    },
-  ]);
+  // History data from MongoDB
+  const [historyEntries, setHistoryEntries] = useState<GrapesEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Get userId from localStorage
+  const getUserId = () => {
+    return localStorage.getItem("userId");
+  };
+
+  useEffect(() => {
+    // Fetch history on component mount
+    fetchHistory();
+  }, []);
+
+  // Fetch user's GRAPES history from MongoDB
+  const fetchHistory = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      console.error("No userId found");
+      return;
+    }
+
+    setLoadingHistory(true);
+    try {
+      const response = await fetch(`${API_URL}/grapes/user/${userId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryEntries(data);
+        console.log("Fetched GRAPES history:", data);
+      } else {
+        console.error("Failed to fetch history:", response.status);
+        alert("Failed to load history. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error fetching history:", error);
+      alert("Error loading history. Please check your connection.");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Handlers
   const handleInputChange = (
@@ -72,13 +89,27 @@ const Grapes = () => {
       alert("Please fill in at least one activity before saving.");
       return;
     }
+
+    // Check if all 6 fields are filled
+    const allFieldsFilled = Object.values(entries).every((val) => val.trim() !== "");
+    setIsFullyFilled(allFieldsFilled);
+
+    // Always show modal for confirmation
     setShowSaveModal(true);
   };
 
   const handleConfirmSave = async (completed: boolean) => {
+    const userId = getUserId();
+    if (!userId) {
+      alert("You must be logged in to save entries.");
+      setShowSaveModal(false);
+      return;
+    }
+
     // Prepare data for MongoDB
-    const dataToSave: Omit<GrapesEntry, "_id"> = {
-      date: new Date().toISOString().split("T")[0],
+    const dataToSave = {
+      userId,
+      date: new Date().toISOString(),
       gentle: entries.gentle,
       recreation: entries.recreation,
       accomplishment: entries.accomplishment,
@@ -90,38 +121,47 @@ const Grapes = () => {
 
     console.log("Saving to MongoDB:", dataToSave);
 
-    // TODO: API call to save to MongoDB
-    // try {
-    //   const response = await fetch('/api/grapes', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(dataToSave),
-    //   });
-    //   const result = await response.json();
-    //   console.log('Saved:', result);
-    // } catch (error) {
-    //   console.error('Error saving:', error);
-    // }
+    try {
+      const response = await fetch(`${API_URL}/grapes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSave),
+      });
 
-    // Clear form after save
-    setEntries({
-      gentle: "",
-      recreation: "",
-      accomplishment: "",
-      pleasure: "",
-      exercise: "",
-      social: "",
-    });
-    setShowSaveModal(false);
-    alert("Entry saved successfully!");
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Saved successfully:", result);
+
+        // Clear form after save
+        setEntries({
+          gentle: "",
+          recreation: "",
+          accomplishment: "",
+          pleasure: "",
+          exercise: "",
+          social: "",
+        });
+
+        // Refresh history to show new entry
+        await fetchHistory();
+
+        setShowSaveModal(false);
+        alert("Entry saved successfully!");
+      } else {
+        const error = await response.json();
+        console.error("Save failed:", error);
+        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error saving:", error);
+      alert("Error saving entry. Please check your connection.");
+    }
   };
 
   const handleViewHistory = () => {
     setShowHistoryModal(true);
-    // TODO: Fetch history from MongoDB
-    // fetch('/api/grapes/history')
-    //   .then(res => res.json())
-    //   .then(data => setHistoryEntries(data));
+    // Refresh history when opening modal
+    fetchHistory();
   };
 
   const handleHistoryEntryClick = (entry: GrapesEntry) => {
@@ -190,7 +230,7 @@ const Grapes = () => {
             fill="none"
             strokeLinecap="round"
           />
-          
+
           {/* Leaves */}
           <ellipse cx="200" cy="620" rx="50" ry="35" fill="#A7CC81" opacity="0.7" />
           <ellipse cx="240" cy="640" rx="45" ry="32" fill="#A7CC81" opacity="0.8" />
@@ -211,7 +251,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">G</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Gentle-to-Self 
+            Gentle-to-Self
           </div>
           <input
             type="text"
@@ -235,7 +275,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">R</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Recreation 
+            Recreation
           </div>
           <input
             type="text"
@@ -259,7 +299,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">A</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Accomplishment 
+            Accomplishment
           </div>
           <input
             type="text"
@@ -285,7 +325,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">P</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Pleasure 
+            Pleasure
           </div>
           <input
             type="text"
@@ -309,7 +349,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">E</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Exercise 
+            Exercise
           </div>
           <input
             type="text"
@@ -333,7 +373,7 @@ const Grapes = () => {
         >
           <div className="text-4xl font-bold text-dark mb-1">S</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
-            Social 
+            Social
           </div>
           <input
             type="text"
@@ -367,28 +407,62 @@ const Grapes = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h2 className="text-xl font-bold text-dark mb-4">
-              Have you completed all activities?
-            </h2>
-            <p className="text-gray-600 mb-6 text-sm">
-              Mark this entry as completed if you've finished all your planned
-              GRAPES activities for today.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowSaveModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 text-lg font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Not Yet
-              </button>
-              <button
-                onClick={() => handleConfirmSave(true)}
-                className="flex-1 bg-accent-3 text-white  text-lg font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
-              >
-                Completed ✓
-              </button>
-            </div>
+          <div className="bg-white rounded-2xl p-4 max-w-sm w-full shadow-2xl">
+            {isFullyFilled ? (
+              <>
+                <h2 className="text-2xl font-bold text-dark mb-2">
+                  All 6 activities filled! ✓
+                </h2>
+                <p className="text-gray-600 font-semibold text-lg">
+                  Have you completed all of the activities?
+                </p>
+                <p className="text-red-600 mb-6 text-xs font-medium">
+                  ⚠️ Warning: Entries cannot be modified after submission.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setShowSaveModal(false);
+                    }}
+                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Nope
+                  </button>
+                  <button
+                    onClick={() => handleConfirmSave(true)}
+                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                  >
+                    Done ✓
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-dark mb-2">
+                  Confirm Partial Entry?
+                </h2>
+                <p className="text-gray-600  mb-2 text-lg font-semibold">
+                  You haven't filled in all 6 GRAPES activities. Are you sure you want to save this as finished for today?
+                </p>
+                <p className="text-red-600 mb-6 text-xs font-medium">
+                  ⚠️ Warning: Entries cannot be modified after submission.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Nope
+                  </button>
+                  <button
+                    onClick={() => handleConfirmSave(false)}
+                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                  >
+                    Save Partial
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -422,7 +496,11 @@ const Grapes = () => {
               </button>
             </div>
 
-            {historyEntries.length === 0 ? (
+            {loadingHistory ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading history...</p>
+              </div>
+            ) : historyEntries.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 No history entries yet. Start tracking your GRAPES activities!
               </p>
@@ -438,21 +516,28 @@ const Grapes = () => {
                       <div>
                         <div className="font-bold text-dark">
                           {new Date(entry.date).toLocaleDateString("en-US", {
-                            weekday: "long",
+                            weekday: "short",
                             year: "numeric",
-                            month: "long",
+                            month: "short",
                             day: "numeric",
                           })}
                         </div>
-                        <div className="text-sm text-gray-600 mt-1">
-                          {Object.entries(entry).filter(
-                            ([key, value]) =>
-                              key !== "_id" &&
-                              key !== "date" &&
-                              key !== "completed" &&
-                              typeof value === "string" &&
-                              value.trim() !== ""
-                          ).length}{" "}
+                        <div className="text-md font-medium text-dark">
+                          {new Date(entry.date).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </div>
+                        <div className="text-sm font-medium text-gray-600 mt-1">
+                          {[
+                            entry.gentle,
+                            entry.recreation,
+                            entry.accomplishment,
+                            entry.pleasure,
+                            entry.exercise,
+                            entry.social,
+                          ].filter((val) => val && val.trim() !== "").length}{" "}
                           activities logged
                         </div>
                       </div>
@@ -488,7 +573,8 @@ const Grapes = () => {
                 {new Date(selectedHistoryEntry.date).toLocaleDateString(
                   "en-US",
                   {
-                    month: "long",
+                    weekday: "short",
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   }

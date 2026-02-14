@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import instructionsImg from "../../assets/instructions.jpg";
 
 interface CogTriEntry {
@@ -12,6 +12,9 @@ interface CogTriEntry {
 }
 
 const Cogtri = () => {
+  // API URL
+  const API_URL = "http://localhost:5050";
+
   // State for current entry
   const [entry, setEntry] = useState({
     situation: "",
@@ -32,34 +35,55 @@ const Cogtri = () => {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] =
     useState<CogTriEntry | null>(null);
+  const [isFullyFilled, setIsFullyFilled] = useState(false);
 
   // Instructions toggle
   const [instructionsOpen, setInstructionsOpen] = useState(true);
-  
+
   // About toggle
   const [aboutOpen, setAboutOpen] = useState(false);
 
-  // Placeholder history data (will be fetched from MongoDB)
-  const [historyEntries] = useState<CogTriEntry[]>([
-    {
-      _id: "1",
-      date: "2025-02-10",
-      situation: "Failed an exam",
-      thoughts: "I never do well in this class, why even try?",
-      feelings: "Shame, hopelessness",
-      behavior: "Not trying on/studying for future exams",
-      complete: true,
-    },
-    {
-      _id: "2",
-      date: "2025-02-09",
-      situation: "Had a disagreement with a friend",
-      thoughts: "They don't understand me at all",
-      feelings: "Frustrated, lonely",
-      behavior: "Avoided them for the rest of the day",
-      complete: true,
-    },
-  ]);
+  // History data from MongoDB
+  const [historyEntries, setHistoryEntries] = useState<CogTriEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Get userId from localStorage
+  const getUserId = () => {
+    return localStorage.getItem("userId");
+  };
+
+  useEffect(() => {
+
+    // Fetch history on component mount
+    fetchHistory();
+  }, []);
+
+  // Fetch user's CogTri history from MongoDB
+  const fetchHistory = async () => {
+    const userId = getUserId();
+    if (!userId) {
+      console.error("No userId found");
+      return;
+    }
+
+    setLoadingHistory(true);
+    try {
+      const response = await fetch(`${API_URL}/cogtri/user/${userId}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        setHistoryEntries(data);
+        console.log("Fetched CogTri history:", data);
+      } else {
+        console.error("Failed to fetch history:", response.status);
+        setHistoryEntries([]);
+      }
+    } catch (error) {
+      console.error("Error fetching history:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Field labels for display
   const fieldLabels = {
@@ -98,13 +122,27 @@ const Cogtri = () => {
       alert("Please fill in at least one field before saving.");
       return;
     }
+
+    // Check if all 4 fields are filled
+    const allFieldsFilled = Object.values(entry).every((val) => val.trim() !== "");
+    setIsFullyFilled(allFieldsFilled);
+
+    // Always show modal for confirmation
     setShowSaveModal(true);
   };
 
   const handleConfirmSave = async (complete: boolean) => {
+    const userId = getUserId();
+    if (!userId) {
+      alert("You must be logged in to save entries.");
+      setShowSaveModal(false);
+      return;
+    }
+
     // Prepare data for MongoDB
-    const dataToSave: Omit<CogTriEntry, "_id"> = {
-      date: new Date().toISOString().split("T")[0],
+    const dataToSave = {
+      userId,
+      date: new Date().toISOString(),
       situation: entry.situation,
       thoughts: entry.thoughts,
       feelings: entry.feelings,
@@ -114,40 +152,45 @@ const Cogtri = () => {
 
     console.log("Saving to MongoDB:", dataToSave);
 
-    // TODO: API call to save to MongoDB
-    // try {
-    //   const response = await fetch('/api/cogtri', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(dataToSave),
-    //   });
-    //   const result = await response.json();
-    //   console.log('Saved:', result);
-    // } catch (error) {
-    //   console.error('Error saving:', error);
-    // }
+    try {
+      const response = await fetch(`${API_URL}/cogtri`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSave),
+      });
 
-    // Clear form after save
-    setEntry({
-      situation: "",
-      thoughts: "",
-      feelings: "",
-      behavior: "",
-    });
-    setShowSaveModal(false);
-    alert("Entry saved successfully!");
-  };
+      if (response.ok) {
+        const result = await response.json();
+        console.log("Saved successfully:", result);
 
-  const handleNotYet = () => {
-    setShowSaveModal(false);
+        // Clear form after save
+        setEntry({
+          situation: "",
+          thoughts: "",
+          feelings: "",
+          behavior: "",
+        });
+
+        // Refresh history to show new entry
+        await fetchHistory();
+
+        setShowSaveModal(false);
+        alert("Entry saved successfully!");
+      } else {
+        const error = await response.json();
+        console.error("Save failed:", error);
+        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Error saving:", error);
+      alert("Error saving entry. Please check your connection.");
+    }
   };
 
   const handleViewHistory = () => {
     setShowHistoryModal(true);
-    // TODO: Fetch history from MongoDB
-    // fetch('/api/cogtri/history')
-    //   .then(res => res.json())
-    //   .then(data => setHistoryEntries(data));
+    // Refresh history when opening modal
+    fetchHistory();
   };
 
   const handleHistoryEntryClick = (entry: CogTriEntry) => {
@@ -268,9 +311,8 @@ const Cogtri = () => {
         >
           <h2 className="text-dark text-2xl font-bold">Instructions</h2>
           <svg
-            className={`w-6 h-6 text-dark transition-transform duration-300 ${
-              instructionsOpen ? "rotate-180" : ""
-            }`}
+            className={`w-6 h-6 text-dark transition-transform duration-300 ${instructionsOpen ? "rotate-180" : ""
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -286,9 +328,8 @@ const Cogtri = () => {
 
         {/* Collapsible Content */}
         <div
-          className={`overflow-hidden transition-all duration-300 ${
-            instructionsOpen ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ${instructionsOpen ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="flex gap-6">
             {/* Left side - Text */}
@@ -331,9 +372,8 @@ const Cogtri = () => {
         >
           <h2 className="text-highlight text-2xl font-bold">About</h2>
           <svg
-            className={`w-6 h-6 text-highlight transition-transform duration-300 ${
-              aboutOpen ? "rotate-180" : ""
-            }`}
+            className={`w-6 h-6 text-highlight transition-transform duration-300 ${aboutOpen ? "rotate-180" : ""
+              }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -349,9 +389,8 @@ const Cogtri = () => {
 
         {/* Collapsible Content */}
         <div
-          className={`overflow-hidden transition-all duration-300 ${
-            aboutOpen ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"
-          }`}
+          className={`overflow-hidden transition-all duration-300 ${aboutOpen ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"
+            }`}
         >
           {/* Main explanation box */}
           <div className="bg-white rounded-xl rounded-b-none pt-4">
@@ -513,27 +552,59 @@ const Cogtri = () => {
           onClick={handleOverlayClick}
         >
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-            <h2 className="text-xl font-bold text-dark mb-4">
-              Are you done with your entry?
-            </h2>
-            <p className="text-gray-600 mb-6 text-sm">
-              Mark this entry as complete if you've finished filling in all
-              fields.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={handleNotYet}
-                className="flex-1 text-lg bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
-              >
-                Not Yet
-              </button>
-              <button
-                onClick={() => handleConfirmSave(true)}
-                className="flex-1 text-lg bg-accent-3 text-white font-semibold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
-              >
-                Complete ✓
-              </button>
-            </div>
+            {isFullyFilled ? (
+              <>
+                <h2 className="text-xl font-bold text-dark mb-2">
+                  All 4 fields filled! ✓
+                </h2>
+                <p className="text-gray-600 font-semibold text-lg mb-2">
+                  Have you finished reflecting on this situation?
+                </p>
+                <p className="text-red-600 mb-6 text-xs font-medium">
+                  ⚠️ Warning: Entries cannot be modified or edited after submission.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Nope
+                  </button>
+                  <button
+                    onClick={() => handleConfirmSave(true)}
+                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                  >
+                    Done ✓
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-dark mb-2">
+                  Confirm Partial Entry?
+                </h2>
+                <p className="text-gray-600 mb-2 text-lg">
+                  You haven't filled in all 4 fields. Are you sure this is it for now?
+                </p>
+                <p className="text-red-600 mb-6 text-xs font-medium">
+                  ⚠️ Warning: Entries cannot be modified or edited after submission.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                  >
+                    Nope
+                  </button>
+                  <button
+                    onClick={() => handleConfirmSave(false)}
+                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                  >
+                    Save Partial
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -567,7 +638,11 @@ const Cogtri = () => {
               </button>
             </div>
 
-            {historyEntries.length === 0 ? (
+            {loadingHistory ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading history...</p>
+              </div>
+            ) : historyEntries.length === 0 ? (
               <p className="text-gray-500 text-center py-8">
                 No history entries yet. Start tracking your cognitive triangles!
               </p>
@@ -583,13 +658,20 @@ const Cogtri = () => {
                       <div className="flex-1">
                         <div className="font-bold text-dark">
                           {new Date(entry.date).toLocaleDateString("en-US", {
-                            weekday: "long",
+                            weekday: "short",
                             year: "numeric",
-                            month: "long",
+                            month: "short",
                             day: "numeric",
                           })}
-                        </div>
-                        <div className="text-sm text-gray-600 mt-1">
+                      </div>
+                      <div className="text-md font-medium text-dark">
+                        {new Date(entry.date).toLocaleTimeString("en-US", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </div>
+                        <div className="text-sm font-medium text-gray-600 mt-1">
                           Situation: {entry.situation.slice(0, 40)}
                           {entry.situation.length > 40 ? "..." : ""}
                         </div>
@@ -626,7 +708,7 @@ const Cogtri = () => {
                 {new Date(selectedHistoryEntry.date).toLocaleDateString(
                   "en-US",
                   {
-                    month: "long",
+                    month: "short",
                     day: "numeric",
                     year: "numeric",
                   }
