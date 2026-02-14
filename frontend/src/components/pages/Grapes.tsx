@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+//import { useNavigate } from "react-router-dom";
 
 interface GrapesEntry {
   _id?: string;
@@ -14,7 +14,7 @@ interface GrapesEntry {
 }
 
 const Grapes = () => {
-  const navigate = useNavigate();
+  //const navigate = useNavigate();
   
   // State for current entries (one input per category)
   const [entries, setEntries] = useState({
