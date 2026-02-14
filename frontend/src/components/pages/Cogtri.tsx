@@ -163,7 +163,7 @@ const Cogtri = () => {
   };
 
   return (
-    <div className=" bg-primary-light">
+    <div className="min-h-[930px] bg-primary-base flex flex-col">
       {/* CogTri Section */}
       <div className="px-4 pt-4 pb-10">
         <h1 className="text-highlight text-3xl font-bold mb-4 mx-6">CogTri🔺</h1>
@@ -227,7 +227,7 @@ const Cogtri = () => {
           {/* Situation (Center) */}
           <button
             onClick={() => handleOpenModal("situation")}
-            className="absolute bg-primary-light text-dark rounded-full w-28 h-28 flex items-center justify-center text-lg font-bold shadow-lg hover:opacity-80 transition-opacity"
+            className="absolute bg-primary-light text-highlight rounded-full w-28 h-28 flex items-center justify-center text-xl font-bold shadow-lg hover:opacity-80 transition-opacity"
             style={{
               left: "50%",
               top: "55%",
@@ -239,19 +239,19 @@ const Cogtri = () => {
           </button>
         </div>
 
-        <div className="mx-auto w-86 h-1 bg-primary-base mt-2"></div>
+        <div className="mx-auto w-86 h-1 bg-primary-light mt-2"></div>
 
         {/* Action Buttons */}
         <div className="px-6 mt-4 flex gap-4 max-w-md mx-auto">
           <button
             onClick={handleSaveClick}
-            className="flex-1 bg-primary-base text-highlight font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
+            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
           >
             Save Entry
           </button>
           <button
             onClick={handleViewHistory}
-            className="flex-1 bg-primary-base text-highlight font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
+            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
           >
             See History
           </button>
@@ -259,7 +259,7 @@ const Cogtri = () => {
       </div>
 
       {/* Instructions Section */}
-      <div className="px-6 py-4 bg-neutral">
+      <div className="px-6 py-4 bg-highlight">
         {/* Clickable Header */}
         <button
           onClick={() => setInstructionsOpen(!instructionsOpen)}
@@ -291,13 +291,12 @@ const Cogtri = () => {
         >
           <div className="flex gap-6">
             {/* Left side - Text */}
-            <div className="flex-1">
+            <div className="flex-1 font-semibold text-sm">
               <ol className="space-y-3 text-dark">
                 <li className="flex gap-3">
                   <span className="font-bold text-primary-light">1.</span>
                   <span>
-                    Click on a colored tip to input entry for the action
-                    corresponding to that color.
+                    Click on a colored tip to input entry for the action corresponding to that color.
                   </span>
                 </li>
                 <li className="flex gap-3">
@@ -315,19 +314,15 @@ const Cogtri = () => {
               </ol>
             </div>
             {/* Right side - Placeholder for illustration */}
-            <div className="flex-1 bg-gray-200 rounded-lg flex items-center justify-center min-h-[200px]">
-              <p className="text-gray-500 text-sm text-center px-4">
-                [Illustration Placeholder]
-                <br />
-                Insert mockup image here
-              </p>
+            <div className="flex-1 rounded-lg flex items-baseline justify-center min-h-[200px]">
+              <img src="/src/assets/instructions.jpg" alt="Instructions Illustration" className="max-w-full max-h-full" />
             </div>
           </div>
         </div>
       </div>
 
       {/* About Section */}
-      <div className="px-6 py-4 bg-primary-light">
+      <div className="px-6 py-4 bg-primary-base">
         {/* Clickable Header */}
         <button
           onClick={() => setAboutOpen(!aboutOpen)}
@@ -358,33 +353,40 @@ const Cogtri = () => {
           }`}
         >
           {/* Main explanation box */}
-          <div className="bg-white rounded-xl p-4 mb-4">
-            <p className="text-dark font-semibold mb-4">
+          <div className="bg-white rounded-xl rounded-b-none pt-4">
+            <p className="text-dark font-bold text-md mb-4 px-4">
               In any situation, we have...
             </p>
 
             {/* Three colored boxes */}
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-3">
+              <div className="h-2 bg-accent-3 border-primary-base border-r-2"></div>
+              <div className="h-2 bg-accent-1 border-primary-base border-r-2"></div>
+              <div className="h-2 bg-accent-2 "></div>
+            </div>
+
+
+            <div className="grid grid-cols-3">
               {/* Thoughts */}
-              <div className="bg-primary-light text-highlight p-3 rounded">
-                <h3 className="font-bold text-sm mb-2">Thoughts</h3>
-                <p className="text-xs">
+              <div className="bg-primary-light text-highlight p-3 border-r-2 border-primary-base">
+                <h3 className="font-bold text-md mb-2">Thoughts</h3>
+                <p className="text-sm font-semibold">
                   What thoughts did we have during the situation?
                 </p>
               </div>
 
               {/* Feelings */}
-              <div className="bg-primary-light text-highlight p-3 rounded">
-                <h3 className="font-bold text-sm mb-2">Feelings</h3>
-                <p className="text-xs">
+              <div className="bg-primary-light text-highlight p-3 border-r-2 border-primary-base">
+                <h3 className="font-bold text-md mb-2">Feelings</h3>
+                <p className="text-sm font-semibold">
                   How did the situation make us feel?
                 </p>
               </div>
 
               {/* Behaviors */}
-              <div className="bg-primary-light text-highlight p-3 rounded">
-                <h3 className="font-bold text-sm mb-2">Behaviors</h3>
-                <p className="text-xs">
+              <div className="bg-primary-light text-highlight p-3">
+                <h3 className="font-bold text-md mb-2">Behaviors</h3>
+                <p className="text-sm font-semibold">
                   How did we respond to the situation?
                 </p>
               </div>
@@ -392,27 +394,27 @@ const Cogtri = () => {
           </div>
 
           {/* Example box */}
-          <div className="bg-dark rounded-xl p-4">
-            <h3 className="text-highlight font-bold mb-3">
+          <div className="bg-dark rounded-xl rounded-t-none p-4">
+            <h3 className="text-highlight text-md font-bold mb-3">
               Example Situation: Failing an exam
             </h3>
 
             <div className="space-y-3">
               {/* Example 1 - Negative */}
               <div className="space-y-2">
-                <div className="bg-neutral/90 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-neutral/90 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">😞</span>
                   <p className="text-sm text-dark italic">
                     "I never do well in this class, why even try?"
                   </p>
                 </div>
-                <div className="bg-accent-1/80 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-accent-1/80 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">😔</span>
                   <p className="text-sm text-highlight">
                     Shame, hopelessness
                   </p>
                 </div>
-                <div className="bg-accent-2/80 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-accent-2/80 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">😞</span>
                   <p className="text-sm text-dark">
                     Not trying on/studying for future exams
@@ -422,20 +424,20 @@ const Cogtri = () => {
 
               {/* Example 2 - Positive */}
               <div className="space-y-2">
-                <div className="bg-neutral/90 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-neutral/90 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">🙂</span>
                   <p className="text-sm text-dark italic">
                     "I didn't do very well, so I'll study even harder and ace the
                     next one!"
                   </p>
                 </div>
-                <div className="bg-accent-1/80 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-accent-1/80 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">😊</span>
                   <p className="text-sm text-highlight">
                     disappointment, determination
                   </p>
                 </div>
-                <div className="bg-accent-2/80 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-accent-2/80 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">📚</span>
                   <p className="text-sm text-dark">
                     Planning ahead to set aside time for study
@@ -488,13 +490,13 @@ const Cogtri = () => {
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleCancelField}
-                className="flex-1 bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                className="flex-1 text-lg bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveField}
-                className="flex-1 bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
+                className="flex-1 text-lg bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
               >
                 Save
               </button>
@@ -520,13 +522,13 @@ const Cogtri = () => {
             <div className="flex gap-3">
               <button
                 onClick={handleNotYet}
-                className="flex-1 bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                className="flex-1 text-lg bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
               >
                 Not Yet
               </button>
               <button
                 onClick={() => handleConfirmSave(true)}
-                className="flex-1 bg-accent-3 text-white font-semibold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                className="flex-1 text-lg bg-accent-3 text-white font-semibold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
               >
                 Complete ✓
               </button>
@@ -593,11 +595,11 @@ const Cogtri = () => {
                       </div>
                       <div>
                         {entry.complete ? (
-                          <span className="bg-accent-3 text-white text-xs px-2 py-1 rounded-full">
-                            ✓ Complete
+                          <span className="bg-accent-3 text-white text-sm px-2 py-1 rounded-full">
+                            ✓ Completed
                           </span>
                         ) : (
-                          <span className="bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded-full">
+                          <span className="bg-gray-300 text-gray-700 text-sm px-2 py-1 rounded-full">
                             Partial
                           </span>
                         )}
@@ -710,7 +712,7 @@ const Cogtri = () => {
             <div className="mt-6 pt-4 border-t">
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
-                className="w-full bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
+                className="w-full text-lg bg-primary-light text-highlight font-bold py-3 rounded-lg hover:bg-primary-base transition-colors"
               >
                 Close
               </button>

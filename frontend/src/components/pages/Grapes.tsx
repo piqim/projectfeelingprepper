@@ -210,15 +210,15 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">G</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Gentle-to-Self 
           </div>
           <input
             type="text"
             value={entries.gentle}
             onChange={(e) => handleInputChange("gentle", e.target.value)}
-            placeholder="ie. comforting self"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. comforted me"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
 
@@ -234,15 +234,15 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">R</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Recreation 
           </div>
           <input
             type="text"
             value={entries.recreation}
             onChange={(e) => handleInputChange("recreation", e.target.value)}
-            placeholder="ie. example"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. played a game"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
 
@@ -258,7 +258,7 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">A</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Accomplishment 
           </div>
           <input
@@ -267,8 +267,8 @@ const Grapes = () => {
             onChange={(e) =>
               handleInputChange("accomplishment", e.target.value)
             }
-            placeholder="ie. example"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. won a game"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
 
@@ -284,15 +284,15 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">P</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Pleasure 
           </div>
           <input
             type="text"
             value={entries.pleasure}
             onChange={(e) => handleInputChange("pleasure", e.target.value)}
-            placeholder="ie. example"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. ate a burger"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
 
@@ -308,15 +308,15 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">E</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Exercise 
           </div>
           <input
             type="text"
             value={entries.exercise}
             onChange={(e) => handleInputChange("exercise", e.target.value)}
-            placeholder="ie. example"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. benched 220 lbs"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
 
@@ -332,15 +332,15 @@ const Grapes = () => {
           }}
         >
           <div className="text-4xl font-bold text-dark mb-1">S</div>
-          <div className="text-xs text-dark font-semibold text-center mb-3">
+          <div className="text-sm text-dark font-bold text-center mb-3">
             Social 
           </div>
           <input
             type="text"
             value={entries.social}
             onChange={(e) => handleInputChange("social", e.target.value)}
-            placeholder="ie. example"
-            className="w-full text-xs px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
+            placeholder="ie. hung out w/ fam"
+            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
           />
         </div>
       </div>
@@ -349,13 +349,13 @@ const Grapes = () => {
       <div className="px-6 mt-8 flex gap-4">
         <button
           onClick={handleSaveClick}
-          className="flex-1 bg-primary-light text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
+          className="flex-1 bg-primary-light text-xl text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
         >
           Save Entry
         </button>
         <button
           onClick={handleViewHistory}
-          className="flex-1 bg-primary-light text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
+          className="flex-1 bg-primary-light text-xl text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
         >
           See History
         </button>
@@ -378,13 +378,13 @@ const Grapes = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowSaveModal(false)}
-                className="flex-1 bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                className="flex-1 bg-gray-300 text-gray-700 text-lg font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
               >
                 Not Yet
               </button>
               <button
                 onClick={() => handleConfirmSave(true)}
-                className="flex-1 bg-accent-3 text-white font-semibold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                className="flex-1 bg-accent-3 text-white  text-lg font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
               >
                 Completed ✓
               </button>
@@ -458,11 +458,11 @@ const Grapes = () => {
                       </div>
                       <div>
                         {entry.completed ? (
-                          <span className="bg-accent-3 text-white text-xs px-2 py-1 rounded-full">
-                            ✓ Complete
+                          <span className="bg-accent-3 text-white text-sm px-2 py-1 rounded-full">
+                            ✓ Completed
                           </span>
                         ) : (
-                          <span className="bg-gray-300 text-gray-700 text-xs px-2 py-1 rounded-full">
+                          <span className="bg-gray-300 text-gray-700 text-sm px-2 py-1 rounded-full">
                             Partial
                           </span>
                         )}
@@ -551,7 +551,7 @@ const Grapes = () => {
             <div className="mt-6 pt-4 border-t">
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
-                className="w-full bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
+                className="w-full text-lg bg-primary-light text-highlight font-bold py-3 rounded-lg hover:bg-primary-base transition-colors"
               >
                 Close
               </button>
