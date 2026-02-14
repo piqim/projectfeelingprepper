@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import records from "./server/server.js";
+import records from "./records/records.js";
 import dotenv from "dotenv";
 
 dotenv.config(); // Load environment variables
