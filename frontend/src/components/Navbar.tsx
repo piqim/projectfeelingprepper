@@ -77,7 +77,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top Navbar */}
-      <nav className="w-full h-14 bg-dark shadow-md px-4 py-3 flex items-center justify-between">
+      <nav className="fixed w-full h-14 bg-dark shadow-md px-4 py-3 flex items-center justify-between z-50">
         {/* Burger + Logo */}
         <div className="flex items-center gap-3">
           {/* Burger button */}
@@ -111,6 +111,8 @@ const Navbar = () => {
           </div>
         </div>
       </nav>
+
+      <nav className="h-14" /> {/* Spacer to prevent content being hidden behind fixed navbar */}
 
       {/* Overlay */}
       {isOpen && (

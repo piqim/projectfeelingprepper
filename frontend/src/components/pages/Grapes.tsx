@@ -181,7 +181,7 @@ const Grapes = () => {
     <div className=" bg-highlight pb-10">
       {/* Header */}
       <div className="px-6 pt-6 pb-4">
-        <h1 className="text-dark text-3xl font-bold text-center montserrat-alternates">
+        <h1 className="text-dark text-2xl min-[420px]:text-3xl font-bold text-center montserrat-alternates">
           GRAPES (Daily Tracker)
         </h1>
         <div className="w-full h-1 bg-dark mt-2"></div>
@@ -241,11 +241,11 @@ const Grapes = () => {
         {/* Grape Circles with Inputs */}
         {/* G - Gentle (Top Left) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          className="min-[420px]:left-[9%] left-[5%]
+          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
           style={{
             width: "170px",
             height: "170px",
-            left: "9%",
             top: "1%",
             zIndex: 10,
           }}
@@ -265,11 +265,11 @@ const Grapes = () => {
 
         {/* R - Recreation (Top Right) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          className="min-[420px]:right-[9%] right-[4%]
+          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
           style={{
             width: "170px",
             height: "170px",
-            right: "10%",
             top: "7.5%",
             zIndex: 10,
           }}
@@ -289,11 +289,11 @@ const Grapes = () => {
 
         {/* A - Accomplishment (Middle Left) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          className="min-[420px]:left-[10%] left-[4.5%]
+          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
           style={{
             width: "170px",
             height: "170px",
-            left: "7.5%",
             top: "27.5%",
             zIndex: 10,
           }}
@@ -315,11 +315,11 @@ const Grapes = () => {
 
         {/* P - Pleasure (Middle Right) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          className="min-[420px]:right-[9%] right-[4%]
+          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
           style={{
             width: "170px",
             height: "170px",
-            right: "5%",
             top: "32.5%",
             zIndex: 10,
           }}
@@ -339,11 +339,11 @@ const Grapes = () => {
 
         {/* E - Exercise (Bottom Left) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
+          className="min-[410px]:left-[13.5%] left-[4.5%]
+          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
           style={{
             width: "170px",
             height: "170px",
-            left: "15%",
             top: "52.5%",
             zIndex: 10,
           }}

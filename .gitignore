@@ -1,7 +1,8 @@
 # environment variables
+/DEPLOYMENT.md
 server/.env
 server/.env.local
 server/.env.*local
-client/.env
-client/.env.local
-client/.env.*local
+frontend/.env
+frontend/.env.local
+frontend/.env.*local

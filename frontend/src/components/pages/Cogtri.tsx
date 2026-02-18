@@ -208,13 +208,13 @@ const Cogtri = () => {
   };
 
   return (
-    <div className="min-h-[930px] bg-primary-base flex flex-col">
+    <div className="min-h-screen bg-primary-base flex flex-col">
       {/* CogTri Section */}
       <div className="px-4 pt-4 pb-10">
         <h1 className="text-highlight text-3xl font-bold mb-4 mx-6">CogTri🔺</h1>
 
         {/* Triangle Container */}
-        <div className="relative w-full max-w-md mx-auto" style={{ aspectRatio: "1.5" }}>
+        <div className="relative w-full max-w-md mx-auto aspect-[1.25] min-[410px]:aspect-[1.5]" >
           {/* SVG Triangle */}
           <svg
             viewBox="0 0 400 400"
@@ -232,10 +232,10 @@ const Cogtri = () => {
           {/* T - Thoughts (Top) */}
           <button
             onClick={() => handleOpenModal("thoughts")}
-            className="absolute bg-accent-3 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
+            className="top-[0%] min-[410px]:top-[0%]
+            absolute bg-accent-3 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
             style={{
               left: "50%",
-              top: "0%",
               transform: "translateX(-50%)",
               zIndex: 10,
             }}
@@ -246,9 +246,9 @@ const Cogtri = () => {
           {/* B - Behavior (Bottom Left) */}
           <button
             onClick={() => handleOpenModal("behavior")}
-            className="absolute bg-accent-2 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
+            className="left-[7.5%] min-[410px]:left-[14%]
+            absolute bg-accent-2 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
             style={{
-              left: "15%",
               top: "65%",
               zIndex: 10,
             }}
@@ -259,9 +259,9 @@ const Cogtri = () => {
           {/* F - Feelings (Bottom Right) */}
           <button
             onClick={() => handleOpenModal("feelings")}
-            className="absolute bg-accent-1 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
+            className="right-[7.5%] min-[410px]:right-[14%]
+            absolute bg-accent-1 rounded-full w-20 h-20 flex items-center justify-center text-3xl font-bold text-dark shadow-lg hover:opacity-80 transition-opacity"
             style={{
-              right: "15%",
               top: "65%",
               zIndex: 10,
             }}
