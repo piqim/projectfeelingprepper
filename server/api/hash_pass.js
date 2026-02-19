@@ -30,7 +30,7 @@ async function hashPassword(plainText) {
 
 // Example passwords to hash
 const passwordsToHash = [
-  'password123',
+  '@Qimkk04',
   // Add your passwords here
 ];
 

@@ -30,15 +30,14 @@ router.post("/auth/login", async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: "Invalid email or password => (email mismatch)" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     // Verify password with bcrypt
     const isValidPassword = await bcrypt.compare(password, user.password);
     
     if (!isValidPassword) {
-      // debugging logs - remove in production
-      return res.status(401).json({ error: "Invalid email or password => (password mismatch)" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     // Login successful - return user without password
@@ -94,7 +93,7 @@ router.get("/users/:id", async (req, res) => {
 // Create new user
 router.post("/users", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, notifications, theme } = req.body;
     
     // Validation
     if (!username || !email || !password) {
@@ -107,26 +106,26 @@ router.post("/users", async (req, res) => {
 
     const newUser = {
       username,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword, // Store hashed password
       createdAt: new Date(),
       streak: 0,
       petStats: {
         status: "happy", // happy, neutral, sad
-        lastFed: new Date(),
+        lastFed: new Date(), // Same as createdAt
         level: 1,
         experience: 0,
       },
       preferences: {
-        notifications: true,
-        theme: "light",
+        notifications: notifications !== undefined ? notifications : true,
+        theme: theme || "light",
       },
     };
 
     const collection = db.collection("users");
     
     // Check if email already exists
-    const existingUser = await collection.findOne({ email });
+    const existingUser = await collection.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(409).json({ error: "Email already exists" });
     }

@@ -166,7 +166,7 @@ const Home = () => {
 
       {/* Welcome Message */}
       <div className="montserrat-alternates mb-2">
-        <h2 className="text-dark text-3xl font-semibold tracking-wider">
+        <h2 className="text-dark text-2xl font-bold min-[420px]:text-3xl min-[420px]:font-semibold tracking-wider">
           Welcome Back, {user.username}!
         </h2>
       </div>
@@ -282,7 +282,7 @@ const Home = () => {
         {/* Left Section */}
         <div className="flex-1">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h3 className="montserrat-alternates text-highlight text-3xl font-semibold">
+            <h3 className="montserrat-alternates text-highlight text-2xl min-[410px]:text-3xl font-semibold">
               Last GRAPES
             </h3>
             {/* Info Icon */}
@@ -312,10 +312,10 @@ const Home = () => {
           {/* Counter */}
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <span className="text-4xl font-semibold text-dark underline decoration-2 underline-offset-4">
+              <span className="text-3xl min-[410px]:text-4xl font-semibold text-dark underline decoration-2 underline-offset-4">
                 {grapesCount}
               </span>
-              <span className="text-3xl font-semibold text-highlight ml-2">
+              <span className="text-2xl min-[410px]:text-3xl font-semibold text-highlight ml-2">
                 / 6
               </span>
             </div>
@@ -347,7 +347,7 @@ const Home = () => {
         <div className="flex flex-col items-center gap-2">
           <Link
             to="/grapes"
-            className="text-highlight text-xl font-semibold whitespace-nowrap"
+            className="text-highlight text-lg min-[410px]:text-xl font-semibold whitespace-nowrap"
           >
             Go to:
           </Link>
@@ -378,7 +378,7 @@ const Home = () => {
         {/* Left Section */}
         <div className="flex-1">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h3 className="montserrat-alternates text-highlight text-3xl font-semibold">
+            <h3 className="montserrat-alternates text-highlight text-2xl min-[410px]:text-3xl font-semibold">
               Last Cog Tri
             </h3>
             {/* Info Icon */}
@@ -407,7 +407,7 @@ const Home = () => {
 
           {/* Status */}
           <div className="flex items-baseline">
-            <span className="text-2xl font-semibold text-dark border-b-2 border-dark pb-1">
+            <span className="text-xl min-[410px]:text-2xl font-semibold text-dark border-b-2 border-dark pb-1">
               {latestCogTri?.situation || "No recent entries"}
             </span>
           </div>
@@ -420,7 +420,7 @@ const Home = () => {
         <div className="flex flex-col items-center gap-2">
           <Link
             to="/cogtri"
-            className="text-highlight text-xl font-semibold whitespace-nowrap"
+            className="text-highlight text-lg min-[410px]:text-xl font-semibold whitespace-nowrap"
           >
             Go to:
           </Link>
