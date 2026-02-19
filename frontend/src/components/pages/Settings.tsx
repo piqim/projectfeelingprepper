@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import config from "../config";
 
 interface User {
   _id: string;
@@ -12,7 +13,7 @@ interface User {
 
 const Settings = () => {
   const navigate = useNavigate();
-  const API_URL = "http://localhost:5050";
+  const API_URL = config.API_URL;
 
   // User data
   const [user, setUser] = useState<User | null>(null);
