@@ -77,7 +77,7 @@ const Navbar = () => {
   return (
     <>
       {/* Top Navbar */}
-      <nav className="fixed w-full h-14 bg-dark shadow-md px-4 py-3 flex items-center justify-between z-50">
+      <nav className="fixed w-full h-14 bg-dark shadow-md px-4 py-3 flex items-center justify-between  z-50">
         {/* Burger + Logo */}
         <div className="flex items-center gap-3">
           {/* Burger button */}
@@ -323,10 +323,10 @@ const Navbar = () => {
           </div>
 
           {/* Bottom section with Logout */}
-          <div className="px-6 py-4 border-t-2 border-gray-300 bg-gray-50">
+          <div className="px-6 py-4 border-t-2 border-gray-300 bg-gray-50 flex justify-start">
             <button
               onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
+              className="flex items-center justify-start gap-2 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
             >
               <svg
                 className="w-5 h-5"

@@ -19,6 +19,40 @@ const Register = () => {
 
   const API_URL = config.API_URL;
 
+  const isValidObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+
+  const extractMongoId = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (isValidObjectId(trimmed)) return trimmed;
+
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            "$oid" in parsed &&
+            typeof (parsed as { $oid?: unknown }).$oid === "string"
+          ) {
+            const oid = (parsed as { $oid: string }).$oid;
+            return isValidObjectId(oid) ? oid : null;
+          }
+        } catch {
+        }
+      }
+
+      return null;
+    }
+
+    if (value && typeof value === "object" && "$oid" in value) {
+      const oid = (value as { $oid?: unknown }).$oid;
+      if (typeof oid === "string" && isValidObjectId(oid)) return oid;
+    }
+
+    return null;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
     const nextValue =
@@ -92,7 +126,15 @@ const Register = () => {
       console.log("Registration successful:", data);
 
       // Store userId in localStorage
-      localStorage.setItem("userId", data.insertedId);
+      const normalizedUserId = extractMongoId(data?.insertedId);
+
+      if (!normalizedUserId) {
+        setError("Registration succeeded but user ID is invalid. Please try logging in.");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("userId", normalizedUserId);
 
       // Show success message
       alert("Account created successfully! Welcome to FeelingPrepper 🎉");
@@ -336,84 +378,6 @@ const Register = () => {
                   />
                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-light"></div>
                 </label>
-              </div>
-
-              {/* Pet Selection (Coming Soon) */}
-              <div className="relative">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <label className="text-sm font-semibold text-dark">
-                    Select your Starting Pet!
-                  </label>
-                  <p className="text-xs text-gray-600 mt-1 mb-3">
-                    It will be your companion on this journey!
-                  </p>
-                  <div className="flex gap-3">
-                    {/* Fish Pet */}
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="fish"
-                        name="pet"
-                        value="fish"
-                        /*checked={formData.pet === "fish"}*/
-                        onChange={handleChange}
-                        className="w-4 h-4 text-primary-light focus:ring-primary-light"
-                        disabled
-                      />
-                      <label
-                        htmlFor="fish"
-                        className="ml-2 text-sm text-gray-700"
-                      >
-                        Fish
-                      </label>
-                    </div>
-                    {/* Seal Pet */}
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="seal"
-                        name="pet"
-                        value="seal"
-                        onChange={handleChange}
-                        className="w-4 h-4 text-primary-light focus:ring-primary-light"
-                        disabled
-                      />
-                      <label
-                        htmlFor="seal"
-                        className="ml-2 text-sm text-gray-700"
-                      >
-                        Seal
-                      </label>
-                    </div>
-                    {/* Bear Pet */}
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="bear"
-                        name="pet"
-                        value="bear"
-                        onChange={handleChange}
-                        className="w-4 h-4 text-primary-light focus:ring-primary-light"
-                        disabled
-                      />
-                      <label
-                        htmlFor="bear"
-                        className="ml-2 text-sm text-gray-700"
-                      >
-                        Bear
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coming Soon Veil */}
-                <div className="absolute inset-0 bg-dark/60 flex items-center justify-center z-20 rounded-lg pointer-events-none select-none">
-                  <div className="text-center">
-                    <p className="text-white text-2xl font-bold montserrat-alternates tracking-wider">
-                      Coming Soon!
-                    </p>
-                  </div>
-                </div>
               </div>
 
               {/* Theme Selection (Coming Soon) */}

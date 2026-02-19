@@ -8,6 +8,7 @@ interface User {
   email: string;
   streak: number;
   petStats?: {
+    type?: string | null;
     status: "happy" | "neutral" | "sad";
     level: number;
     experience: number;
@@ -40,6 +41,9 @@ const Home = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
+  const [requiresPetSelection, setRequiresPetSelection] = useState(false);
+  const [selectingPet, setSelectingPet] = useState(false);
+  const [petSelectionError, setPetSelectionError] = useState("");
   const [latestGrapes, setLatestGrapes] = useState<GrapesEntry | null>(null);
   const [latestCogTri, setLatestCogTri] = useState<CogTriEntry | null>(null);
 
@@ -50,13 +54,69 @@ const Home = () => {
     checkAuthAndFetchData();
   }, []);
 
+  const hasPetType = (type?: string | null) => {
+    if (typeof type !== "string") return false;
+    return type.trim().length > 0;
+  };
+
+  const isValidObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+
+  const extractMongoId = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (isValidObjectId(trimmed)) return trimmed;
+
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            "$oid" in parsed &&
+            typeof (parsed as { $oid?: unknown }).$oid === "string"
+          ) {
+            const oid = (parsed as { $oid: string }).$oid;
+            return isValidObjectId(oid) ? oid : null;
+          }
+        } catch {
+        }
+      }
+
+      return null;
+    }
+
+    if (value && typeof value === "object" && "$oid" in value) {
+      const oid = (value as { $oid?: unknown }).$oid;
+      if (typeof oid === "string" && isValidObjectId(oid)) return oid;
+    }
+
+    return null;
+  };
+
+  const getSessionUserId = () => {
+    const storedUserId = localStorage.getItem("userId");
+    if (!storedUserId) return null;
+
+    const normalizedUserId = extractMongoId(storedUserId);
+    if (!normalizedUserId) return null;
+
+    if (storedUserId !== normalizedUserId) {
+      localStorage.setItem("userId", normalizedUserId);
+    }
+
+    return normalizedUserId;
+  };
+
   const checkAuthAndFetchData = async () => {
     // Check if user is logged in (userId stored in localStorage) 
-    const userId = localStorage.getItem("userId");
+    const userId = getSessionUserId();
 
     if (!userId) {
       // User not logged in - this shouldn't happen due to ProtectedRoute
       // but handle gracefully just in case
+      localStorage.removeItem("userId");
+      setLoading(false);
+      navigate("/user/login");
       return;
     }
 
@@ -77,7 +137,17 @@ const Home = () => {
       }
 
       const data = await response.json();
+      const normalizedResponseUserId = extractMongoId(data?.user?._id);
+      if (normalizedResponseUserId) {
+        localStorage.setItem("userId", normalizedResponseUserId);
+      }
+
       setUser(data.user);
+      setRequiresPetSelection(
+        typeof data.requiresPetSelection === "boolean"
+          ? data.requiresPetSelection
+          : !hasPetType(data?.user?.petStats?.type)
+      );
       setLatestGrapes(data.latestGrapes);
       setLatestCogTri(data.latestCogTri);
     } catch (error) {
@@ -107,6 +177,10 @@ const Home = () => {
 
   // Get pet status message
   const getPetMessage = () => {
+    if (!hasPetType(user?.petStats?.type)) {
+      return "Choose your pet to start your journey!";
+    }
+
     const status = user?.petStats?.status || "neutral";
 
     if (status === "happy") {
@@ -125,6 +199,358 @@ const Home = () => {
     if (status === "happy") return "text-green-500";
     if (status === "sad") return "text-red-500";
     return "text-gray-500";
+  };
+
+  const getSelectedPetType = () => {
+    const type = user?.petStats?.type;
+    if (!hasPetType(type)) return null;
+    return type!.trim().toLowerCase();
+  };
+
+  const getSelectedPetName = () => {
+    const selectedType = getSelectedPetType();
+    if (selectedType === "fish") return "Fish";
+    if (selectedType === "seal") return "Seal";
+    return "Not selected";
+  };
+
+  const renderPetCharacter = () => {
+    const selectedType = getSelectedPetType();
+
+    if (selectedType === "seal") {
+      return (
+        <div className="relative z-10" id="seal">
+          <svg
+            viewBox="0 0 120 100"
+            className="w-32 h-32"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <ellipse
+              cx="25"
+              cy="78"
+              rx="8"
+              ry="9"
+              transform="rotate(30 25 78)"
+              fill="#9BB7BD"
+              stroke="#5C6F75"
+              strokeWidth="2"
+            />
+
+            <ellipse
+              cx="110"
+              cy="80"
+              rx="7"
+              ry="9"
+              transform="rotate(105 110 78)"
+              fill="#9BB7BD"
+              stroke="#5C6F75"
+              strokeWidth="2"
+            />
+
+            <ellipse
+              cx="58"
+              cy="88"
+              rx="9"
+              ry="7"
+              fill="#9BB7BD"
+              stroke="#5C6F75"
+              strokeWidth="2"
+            />
+
+            <path
+              d="M 22 52 Q 18 91 49 88 Q 101 96 108 77 Q 112 51 74.5 50.5 Q 71.5 17.5 47.5 17.5 Q 23.5 17.5 22 52"
+              fill="#9BB7BD"
+              stroke="#5C6F75"
+              strokeWidth="3"
+            />
+
+            <circle cx="38" cy="40" r="5" fill="#222" />
+            <circle cx="58" cy="40" r="5" fill="#222" />
+
+            <circle cx="39.5" cy="38.5" r="2" fill="white" />
+            <circle cx="59.5" cy="38.5" r="2" fill="white" />
+
+            <ellipse
+              cx="48"
+              cy="52"
+              rx="3"
+              ry="2"
+              fill="#444"
+            />
+
+            <path
+              d="M 41 55 Q 45 60 48 54 Q 51 60 55 55"
+              stroke="#444"
+              strokeWidth="2"
+              fill="none"
+            />
+
+            <path
+              d="M 34 32 Q 38 30 42 32"
+              stroke="#5C6F75"
+              strokeWidth="2"
+              fill="none"
+            />
+            <path
+              d="M 54 32 Q 58 30 62 32"
+              stroke="#5C6F75"
+              strokeWidth="2"
+              fill="none"
+            />
+          </svg>
+        </div>
+      );
+    }
+
+    if (selectedType === "fish") {
+      return (
+        <div className="relative z-10" id="fish">
+          <svg
+            viewBox="0 0 120 100"
+            className="w-32 h-32"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18"
+              fill="#0281A7"
+              stroke="#222089"
+              strokeWidth="3"
+            />
+            <ellipse
+              cx="55"
+              cy="35"
+              rx="35"
+              ry="25"
+              fill="#FF7F50"
+              stroke="#222089"
+              strokeWidth="3"
+            />
+            <path
+              d="M 23 45 Q 44 48 55 38"
+              stroke="#222089"
+              strokeWidth="2"
+              fill="none"
+            />
+            <path
+              d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35"
+              fill="#FF7F50"
+              stroke="#222089"
+              strokeWidth="3"
+            />
+
+            <circle
+              cx="45"
+              cy="30"
+              r="8"
+              fill="white"
+              stroke="#222089"
+              strokeWidth="2"
+            />
+            <circle cx="45" cy="30" r="4" fill="#222089" />
+            <path
+              d="M 65 30 Q 70 35, 65 40"
+              stroke="#222089"
+              strokeWidth="2"
+              fill="none"
+            />
+            <path
+              d="M 70 32 Q 75 37, 70 42"
+              stroke="#222089"
+              strokeWidth="2"
+              fill="none"
+            />
+          </svg>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  const renderPetPreview = (petType: "fish" | "seal") => {
+    if (petType === "seal") {
+      return (
+        <svg
+          viewBox="0 0 120 100"
+          className="w-20 h-20"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <ellipse
+            cx="25"
+            cy="78"
+            rx="8"
+            ry="9"
+            transform="rotate(30 25 78)"
+            fill="#9BB7BD"
+            stroke="#5C6F75"
+            strokeWidth="2"
+          />
+          <ellipse
+            cx="110"
+            cy="80"
+            rx="7"
+            ry="9"
+            transform="rotate(105 110 78)"
+            fill="#9BB7BD"
+            stroke="#5C6F75"
+            strokeWidth="2"
+          />
+          <ellipse
+            cx="58"
+            cy="88"
+            rx="9"
+            ry="7"
+            fill="#9BB7BD"
+            stroke="#5C6F75"
+            strokeWidth="2"
+          />
+          <path
+            d="M 22 52 Q 18 91 49 88 Q 101 96 108 77 Q 112 51 74.5 50.5 Q 71.5 17.5 47.5 17.5 Q 23.5 17.5 22 52"
+            fill="#9BB7BD"
+            stroke="#5C6F75"
+            strokeWidth="3"
+          />
+          <circle cx="38" cy="40" r="5" fill="#222" />
+          <circle cx="58" cy="40" r="5" fill="#222" />
+          <circle cx="39.5" cy="38.5" r="2" fill="white" />
+          <circle cx="59.5" cy="38.5" r="2" fill="white" />
+          <ellipse cx="48" cy="52" rx="3" ry="2" fill="#444" />
+          <path
+            d="M 41 55 Q 45 60 48 54 Q 51 60 55 55"
+            stroke="#444"
+            strokeWidth="2"
+            fill="none"
+          />
+          <path
+            d="M 34 32 Q 38 30 42 32"
+            stroke="#5C6F75"
+            strokeWidth="2"
+            fill="none"
+          />
+          <path
+            d="M 54 32 Q 58 30 62 32"
+            stroke="#5C6F75"
+            strokeWidth="2"
+            fill="none"
+          />
+        </svg>
+      );
+    }
+
+    return (
+      <svg
+        viewBox="0 0 120 100"
+        className="w-20 h-20"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18"
+          fill="#0281A7"
+          stroke="#222089"
+          strokeWidth="3"
+        />
+        <ellipse
+          cx="55"
+          cy="35"
+          rx="35"
+          ry="25"
+          fill="#FF7F50"
+          stroke="#222089"
+          strokeWidth="3"
+        />
+        <path
+          d="M 23 45 Q 44 48 55 38"
+          stroke="#222089"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35"
+          fill="#FF7F50"
+          stroke="#222089"
+          strokeWidth="3"
+        />
+        <circle
+          cx="45"
+          cy="30"
+          r="8"
+          fill="white"
+          stroke="#222089"
+          strokeWidth="2"
+        />
+        <circle cx="45" cy="30" r="4" fill="#222089" />
+        <path
+          d="M 65 30 Q 70 35, 65 40"
+          stroke="#222089"
+          strokeWidth="2"
+          fill="none"
+        />
+        <path
+          d="M 70 32 Q 75 37, 70 42"
+          stroke="#222089"
+          strokeWidth="2"
+          fill="none"
+        />
+      </svg>
+    );
+  };
+
+  const handlePetSelect = async (type: string) => {
+    const userIdFromSession = getSessionUserId();
+    const userIdFromUser = extractMongoId(user?._id);
+    const resolvedUserId = userIdFromSession || userIdFromUser;
+
+    if (!resolvedUserId) {
+      setPetSelectionError("Session expired. Please log in again.");
+      return;
+    }
+
+    setSelectingPet(true);
+    setPetSelectionError("");
+
+    try {
+      const response = await fetch(`${API_URL}/users/${resolvedUserId}/pet-selection`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ type }),
+      });
+
+      const rawText = await response.text();
+      let data: { error?: string; user?: User; requiresPetSelection?: boolean } = {};
+
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          data = {};
+        }
+      }
+
+      if (!response.ok) {
+        setPetSelectionError(
+          data.error ||
+          `Failed to save pet choice (${response.status}). Please restart backend and try again.`
+        );
+        return;
+      }
+
+      if (data.user) {
+        setUser(data.user);
+      }
+
+      setRequiresPetSelection(
+        typeof data.requiresPetSelection === "boolean"
+          ? data.requiresPetSelection
+          : !hasPetType(data?.user?.petStats?.type)
+      );
+    } catch (error) {
+      console.error("Error saving pet selection:", error);
+      setPetSelectionError("Failed to save pet choice. Please try again.");
+    } finally {
+      setSelectingPet(false);
+    }
   };
 
   // Loading state
@@ -162,7 +588,55 @@ const Home = () => {
   const grapesCount = calculateGrapesCount();
 
   return (
-    <div className="bg-neutral p-4 flex flex-col gap-4">
+    <div className="bg-neutral p-4 flex flex-col gap-4 relative">
+
+      {requiresPetSelection && (
+        <div className="fixed inset-0 bg-dark/80 z-50 flex items-center justify-center p-6">
+          <div className="bg-white rounded-3xl shadow-lg border-4 border-secondary p-6 w-full max-w-lg text-center">
+            <p className="text-2xl mb-1">✨ 🐾 ✨</p>
+            <h3 className="text-dark text-2xl font-bold mb-2">Choose Your Companion</h3>
+            <p className="text-dark/80 text-sm font-semibold mb-5">
+              Tap your favorite buddy to begin your journey.
+            </p>
+
+            <div className="flex flex-row gap-3 w-full">
+              {[
+                { label: "Fish", value: "fish" },
+                { label: "Seal", value: "seal" },
+              ].map((petType) => (
+                <div
+                  key={petType.value}
+                  role="button"
+                  tabIndex={selectingPet ? -1 : 0}
+                  onClick={() => handlePetSelect(petType.value)}
+                  onKeyDown={(event) => {
+                    if (!selectingPet && (event.key === "Enter" || event.key === " ")) {
+                      event.preventDefault();
+                      handlePetSelect(petType.value);
+                    }
+                  }}
+                  className={`flex-1 min-w-0 rounded-2xl border-2 p-3 flex flex-col items-center justify-center transition-all ${
+                    selectingPet
+                      ? "opacity-60 cursor-not-allowed border-gray-300"
+                      : "cursor-pointer border-primary-light hover:border-primary-base hover:bg-primary-light/10"
+                  }`}
+                >
+                  <div className="mb-2">{renderPetPreview(petType.value as "fish" | "seal")}</div>
+                  <p className="text-dark font-bold text-lg">{petType.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {petSelectionError && (
+              <p className="text-red-600 text-sm font-semibold mt-4">{petSelectionError}</p>
+            )}
+
+            {selectingPet && (
+              <p className="text-dark text-sm font-semibold mt-4">Saving your pet...</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Welcome Message */}
       <div className="montserrat-alternates mb-2">
@@ -171,18 +645,9 @@ const Home = () => {
         </h2>
       </div>
 
-      {/* PET SECTION --> integrate pet feature soon*/}
+      {/* PET SECTION */}
       <div className="border-4 border-dark rounded-2xl overflow-hidden flex h-48 relative">
-        {/* Coming Soon Veil --> remove once pet feature is integrated!!! */}
-        <div className="absolute inset-0 bg-dark/60 flex items-center justify-center z-20 pointer-events-none select-none">
-          <div className="text-center">
-            <p className="text-white text-4xl font-bold montserrat-alternates tracking-wider">
-              Coming Soon!
-            </p>
-          </div>
-        </div>
-
-        {/* Left side (scene with fish) */}
+        {/* Left side (scene with pet) */}
         <div className="relative flex-1 bg-primary-light/20 flex items-end justify-center pb-8">
           {/* Sun */}
           <div className="absolute top-4 left-4 w-12 h-12 bg-accent-1 rounded-full"></div>
@@ -190,77 +655,12 @@ const Home = () => {
           {/* Ground/Grass */}
           <div className="absolute bottom-0 left-0 right-0 h-20 bg-accent-3 rounded-bl-xl"></div>
 
-          {/* Fish Character */}
-          <div className="relative z-10">
-            <svg
-              viewBox="0 0 120 100"
-              className="w-32 h-32"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* Body torso */}
-              <path
-                d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18"
-                fill="#0281A7"
-                stroke="#222089"
-                strokeWidth="3"
-              />
-              {/* Fish body */}
-              <ellipse
-                cx="55"
-                cy="35"
-                rx="35"
-                ry="25"
-                fill="#FF7F50"
-                stroke="#222089"
-                strokeWidth="3"
-              />
-              {/* Smile */}
-              <path
-                d="M 23 45 Q 44 48 55 38"
-                stroke="#222089"
-                strokeWidth="2"
-                fill="none"
-              />
-              {/* Fish tail */}
-              <path
-                d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35"
-                fill="#FF7F50"
-                stroke="#222089"
-                strokeWidth="3"
-              />
-
-              {/* Eye outer */}
-              <circle
-                cx="45"
-                cy="30"
-                r="8"
-                fill="white"
-                stroke="#222089"
-                strokeWidth="2"
-              />
-              {/* Eye inner */}
-              <circle cx="45" cy="30" r="4" fill="#222089" />
-              {/* Gills */}
-              <path
-                d="M 65 30 Q 70 35, 65 40"
-                stroke="#222089"
-                strokeWidth="2"
-                fill="none"
-              />
-              <path
-                d="M 70 32 Q 75 37, 70 42"
-                stroke="#222089"
-                strokeWidth="2"
-                fill="none"
-              />
-
-            </svg>
-          </div>
+          {renderPetCharacter()}
         </div>
 
         {/* Right side (Pet Stats) */}
         <div className="bg-accent-2 flex flex-col items-center justify-start py-4 px-4 w-2/5">
-          <h2 className="text-xl font-bold text-dark">Pet Stats</h2>
+          <h2 className="text-xl font-bold text-dark">{getSelectedPetName()} Stats</h2>
 
           {/* Status Indicator */}
           <div className="flex items-center gap-2 mb-2">

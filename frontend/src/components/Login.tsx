@@ -14,6 +14,40 @@ const Login = () => {
 
   const API_URL = config.API_URL;
 
+  const isValidObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+
+  const extractMongoId = (value: unknown): string | null => {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (isValidObjectId(trimmed)) return trimmed;
+
+      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (
+            parsed &&
+            typeof parsed === "object" &&
+            "$oid" in parsed &&
+            typeof (parsed as { $oid?: unknown }).$oid === "string"
+          ) {
+            const oid = (parsed as { $oid: string }).$oid;
+            return isValidObjectId(oid) ? oid : null;
+          }
+        } catch {
+        }
+      }
+
+      return null;
+    }
+
+    if (value && typeof value === "object" && "$oid" in value) {
+      const oid = (value as { $oid?: unknown }).$oid;
+      if (typeof oid === "string" && isValidObjectId(oid)) return oid;
+    }
+
+    return null;
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -70,7 +104,15 @@ const Login = () => {
       console.log("Login successful:", data);
 
       // Store userId in localStorage
-      localStorage.setItem("userId", data.user._id);
+      const normalizedUserId = extractMongoId(data?.user?._id);
+
+      if (!normalizedUserId) {
+        setError("Login succeeded but user ID is invalid. Please contact support.");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("userId", normalizedUserId);
 
       // Redirect to home page
       navigate("/");

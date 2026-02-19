@@ -517,7 +517,7 @@ const Dev = () => {
 
       {/* Drawing Board for Characters - Dev / UI Dsgnr use only!!! */}
       <div className="border-4 border-dark rounded-2xl overflow-hidden flex h-48 mt-6">
-        {/* Left side (scene with fish) */}
+        {/* Left side (scene with fish/seal) */}
         <div className="relative flex-1 bg-primary-light/20 flex items-end justify-center pb-8">
           {/* Sun */}
           <div className="absolute top-4 left-4 w-12 h-12 bg-accent-1 rounded-full"></div>
@@ -526,7 +526,7 @@ const Dev = () => {
           <div className="absolute bottom-0 left-0 right-0 h-20 bg-accent-3 rounded-bl-xl"></div>
 
           {/* Fish Character */}
-          <div className="relative z-10">
+          <div className="relative z-10" id="fish">
             <svg
               viewBox="0 0 120 100"
               className="w-32 h-32"
@@ -563,7 +563,7 @@ const Dev = () => {
                 stroke="#222089"
                 strokeWidth="3"
               />
-              
+
               {/* Eye outer */}
               <circle
                 cx="45"
@@ -588,9 +588,105 @@ const Dev = () => {
                 strokeWidth="2"
                 fill="none"
               />
-            
+
             </svg>
           </div>
+
+          {/* Seal Character */}
+          <div className="relative z-10" id="seal">
+            <svg
+              viewBox="0 0 120 100"
+              className="w-32 h-32"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Left flipper */}
+              <ellipse
+                cx="25"
+                cy="78"
+                rx="8"
+                ry="9"
+                transform="rotate(30 25 78)"
+                fill="#9BB7BD"
+                stroke="#5C6F75"
+                strokeWidth="2"
+              />
+
+              {/* tail flipper */}
+              <ellipse
+                cx="110"
+                cy="80"
+                rx="7"
+                ry="9"
+                transform="rotate(105 110 78)"
+                fill="#9BB7BD"
+                stroke="#5C6F75"
+                strokeWidth="2"
+              />
+
+              {/* right flipper */}
+              <ellipse
+                cx="58"
+                cy="88"
+                rx="9"
+                ry="7"
+                fill="#9BB7BD"
+                stroke="#5C6F75"
+                strokeWidth="2"
+              />
+              {/* Body */}
+              <path
+                d="M 22 52 Q 18 91 49 88 Q 101 96 108 77 Q 112 51 74.5 50.5 Q 71.5 17.5 47.5 17.5 Q 23.5 17.5 22 52"
+                fill="#9BB7BD"
+                stroke="#5C6F75"
+                strokeWidth="3"
+              />
+
+
+
+
+
+
+              {/* Eyes */}
+              <circle cx="38" cy="40" r="5" fill="#222" />
+              <circle cx="58" cy="40" r="5" fill="#222" />
+
+              <circle cx="39.5" cy="38.5" r="2" fill="white" />
+              <circle cx="59.5" cy="38.5" r="2" fill="white" />
+
+              {/* Nose */}
+              <ellipse
+                cx="48"
+                cy="52"
+                rx="3"
+                ry="2"
+                fill="#444"
+              />
+
+              {/* Mouth */}
+              <path
+                d="M 41 55 Q 45 60 48 54 Q 51 60 55 55"
+                stroke="#444"
+                strokeWidth="2"
+                fill="none"
+              />
+
+              {/* Eyebrows */}
+              <path
+                d="M 34 32 Q 38 30 42 32"
+                stroke="#5C6F75"
+                strokeWidth="2"
+                fill="none"
+              />
+              <path
+                d="M 54 32 Q 58 30 62 32"
+                stroke="#5C6F75"
+                strokeWidth="2"
+                fill="none"
+              />
+            </svg>
+          </div>
+
+
         </div>
 
         {/* Right side (Pet Stats) */}

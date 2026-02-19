@@ -7,6 +7,17 @@ import bcrypt from "bcrypt";
 dotenv.config();
 const router = express.Router();
 
+const getNormalizedPetType = (petStats) => {
+  const type = petStats?.type;
+
+  if (typeof type !== "string") return null;
+
+  const normalized = type.trim();
+  return normalized.length > 0 ? normalized : null;
+};
+
+const hasSelectedPet = (petStats) => getNormalizedPetType(petStats) !== null;
+
 /**
  * ======================
  * AUTHENTICATION
@@ -46,6 +57,7 @@ router.post("/auth/login", async (req, res) => {
     res.status(200).json({
       message: "Login successful",
       user: userWithoutPassword,
+      requiresPetSelection: !hasSelectedPet(user.petStats),
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -83,9 +95,88 @@ router.get("/users/:id", async (req, res) => {
     
     // Don't send password to client
     const { password, ...userWithoutPassword } = user;
-    res.status(200).json(userWithoutPassword);
+    res.status(200).json({
+      ...userWithoutPassword,
+      requiresPetSelection: !hasSelectedPet(user.petStats),
+    });
   } catch (err) {
     console.error("Error fetching user:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get user pet selection status
+router.get("/users/:id/pet-selection", async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const user = await db.collection("users").findOne(
+      { _id: new ObjectId(req.params.id) },
+      { projection: { petStats: 1 } }
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const selectedType = getNormalizedPetType(user.petStats);
+
+    res.status(200).json({
+      type: selectedType,
+      requiresPetSelection: selectedType === null,
+    });
+  } catch (err) {
+    console.error("Error fetching pet selection:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Choose or update user pet type
+router.patch("/users/:id/pet-selection", async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    if (typeof req.body.type !== "string" || req.body.type.trim().length === 0) {
+      return res.status(400).json({ error: "type is required" });
+    }
+
+    const petType = req.body.type.trim().toLowerCase();
+    const allowedPetTypes = ["fish", "seal"];
+
+    if (!allowedPetTypes.includes(petType)) {
+      return res.status(400).json({ error: "type must be fish or seal" });
+    }
+
+    const updateResult = await db.collection("users").updateOne(
+      { _id: new ObjectId(req.params.id) },
+      {
+        $set: {
+          "petStats.type": petType,
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    if (updateResult.matchedCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const updatedUser = await db.collection("users").findOne(
+      { _id: new ObjectId(req.params.id) },
+      { projection: { password: 0 } }
+    );
+
+    res.status(200).json({
+      message: "Pet type updated successfully",
+      user: updatedUser,
+      requiresPetSelection: !hasSelectedPet(updatedUser?.petStats),
+    });
+  } catch (err) {
+    console.error("Error updating pet selection:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -111,6 +202,7 @@ router.post("/users", async (req, res) => {
       createdAt: new Date(),
       streak: 0,
       petStats: {
+        type: null,
         status: "happy", // happy, neutral, sad
         lastFed: new Date(), // Same as createdAt
         level: 1,
@@ -590,6 +682,10 @@ router.get("/dashboard/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
 
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
     // Fetch user, latest GRAPES, latest CogTri in parallel
     const [user, latestGrapes, latestCogTri, grapeCount, cogtriCount] = await Promise.all([
       db.collection("users").findOne({ _id: new ObjectId(userId) }),
@@ -607,6 +703,7 @@ router.get("/dashboard/:userId", async (req, res) => {
 
     res.status(200).json({
       user: userWithoutPassword,
+      requiresPetSelection: !hasSelectedPet(user.petStats),
       latestGrapes,
       latestCogTri,
       stats: {
