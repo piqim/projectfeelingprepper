@@ -113,6 +113,7 @@ const Grapes = () => {
     const dataToSave = {
       userId,
       date: new Date().toISOString(),
+      localDate: new Date().toLocaleDateString("en-CA"),
       gentle: entries.gentle,
       recreation: entries.recreation,
       accomplishment: entries.accomplishment,

@@ -33,6 +33,7 @@ const Settings = () => {
   // Modal states
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -114,12 +115,14 @@ const Settings = () => {
       return;
     }
 
+    // Always require current password to make profile changes
+    if (!formData.password) {
+      setError("Please enter your current password to save changes");
+      return;
+    }
+
     // If changing password
     if (formData.newPassword) {
-      if (!formData.password) {
-        setError("Please enter your current password");
-        return;
-      }
       if (formData.newPassword.length < 6) {
         setError("New password must be at least 6 characters");
         return;
@@ -156,6 +159,7 @@ const Settings = () => {
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
+          password: formData.password,
         }),
       });
 
@@ -235,6 +239,10 @@ const Settings = () => {
       setError('Please type "DELETE" to confirm');
       return;
     }
+    if (!deletePassword) {
+      setError("Please enter your password to confirm deletion");
+      return;
+    }
 
     setIsDeleting(true);
     const userId = getUserId();
@@ -243,6 +251,8 @@ const Settings = () => {
     try {
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
       });
 
       if (response.ok) {
@@ -251,7 +261,8 @@ const Settings = () => {
         showToast("Your account and all data have been deleted.", "info");
         setTimeout(() => navigate("/user/login"), 1500);
       } else {
-        setError("Failed to delete account");
+        const data = await response.json();
+        setError(data.error || "Failed to delete account");
         setIsDeleting(false);
       }
     } catch {
@@ -372,6 +383,7 @@ const Settings = () => {
                 setError("");
                 setSuccess("");
                 setDeleteConfirmText("");
+                setDeletePassword("");
               }}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
             >
@@ -539,9 +551,25 @@ const Settings = () => {
                     />
                   </div>
 
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-dark mb-2">
+                      Enter your password
+                    </label>
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setError("");
+                      }}
+                      placeholder="Your current password"
+                      className="w-full border-2 border-red-300 rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
                   <button
                     onClick={handleDeleteAccount}
-                    disabled={isDeleting || deleteConfirmText !== "DELETE"}
+                    disabled={isDeleting || deleteConfirmText !== "DELETE" || !deletePassword}
                     className="w-full bg-red-500 text-white font-bold py-3 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isDeleting ? "Deleting..." : "🗑️ Delete Account"}

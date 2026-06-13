@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import orangeImg from "../assets/orange.png";
 import config from "../config";
 import { useToast } from "../hooks/useToast";
 import Toast from "./Toast";
@@ -93,6 +94,10 @@ const Home = () => {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    return () => { calendarControllerRef.current?.abort(); };
+  }, []);
+
   const hasPetType = (type?: string | null) => {
     if (typeof type !== "string") return false;
     return type.trim().length > 0;
@@ -164,7 +169,7 @@ const Home = () => {
           localStorage.removeItem("userId");
           sessionStorage.removeItem("sessionVerified");
           showToast("User not found. Please log in again.", "error");
-          navigate("/user/login");
+          setTimeout(() => navigate("/user/login"), 1500);
           return;
         }
         throw new Error(`Server error: ${response.status}`);
@@ -212,13 +217,16 @@ const Home = () => {
         );
         setActiveDays(days);
       }
+      setLoading(false);
     } catch (error) {
+      // Don't set loading=false on abort — the component is unmounting and a
+      // second fetch (StrictMode remount) will complete normally.
       if (error instanceof DOMException && error.name === "AbortError") return;
 
       // Try to load cached snapshot before showing an error
-      const cached = localStorage.getItem(`fp_cache_${userId}`);
-      if (cached) {
-        try {
+      try {
+        const cached = localStorage.getItem(`fp_cache_${userId}`);
+        if (cached) {
           const snap = JSON.parse(cached);
           setUser(snap.user);
           setRequiresPetSelection(!hasPetType(snap.user?.petStats?.type));
@@ -236,13 +244,12 @@ const Home = () => {
             );
             setActiveDays(days);
           }
-        } catch {
+        } else {
           showToast("Failed to load data. Please try again.", "error");
         }
-      } else {
+      } catch {
         showToast("Failed to load data. Please try again.", "error");
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -879,7 +886,7 @@ const Home = () => {
               }`}
             >
               <img
-                src="/src/assets/orange.png"
+                src={orangeImg}
                 alt="Feed pet"
                 className="w-10 h-10"
               />

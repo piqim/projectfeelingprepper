@@ -165,6 +165,7 @@ const Cogtri = () => {
     const dataToSave = {
       userId,
       date: new Date().toISOString(),
+      localDate: new Date().toLocaleDateString("en-CA"),
       situation: entry.situation,
       thoughts: entry.thoughts,
       feelings: entry.feelings,

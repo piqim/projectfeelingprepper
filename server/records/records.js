@@ -50,17 +50,31 @@ const awardXP = async (userId, amount) => {
   );
   if (!user) return null;
 
-  const currentXP = user.petStats?.experience ?? 0;
   const currentLevel = user.petStats?.level ?? 1;
-  const newXP = currentLevel >= MAX_LEVEL ? currentXP : currentXP + amount;
-  const newLevel = getLevelForXP(newXP);
+  if (currentLevel >= MAX_LEVEL) {
+    return { newExperience: user.petStats?.experience ?? 0, newLevel: currentLevel, leveledUp: false };
+  }
 
-  await db.collection("users").updateOne(
+  // Atomically increment XP and read the post-increment total
+  const updated = await db.collection("users").findOneAndUpdate(
     { _id: new ObjectId(userId) },
-    { $set: { "petStats.experience": newXP, "petStats.level": newLevel } }
+    { $inc: { "petStats.experience": amount } },
+    { projection: { "petStats.experience": 1, "petStats.level": 1 }, returnDocument: "after" }
   );
+  if (!updated) return null;
 
-  return { newExperience: newXP, newLevel, leveledUp: newLevel > currentLevel };
+  const newXP = updated.petStats.experience;
+  const newLevel = getLevelForXP(newXP);
+  const leveledUp = newLevel > currentLevel;
+
+  if (leveledUp) {
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(userId) },
+      { $set: { "petStats.level": newLevel } }
+    );
+  }
+
+  return { newExperience: newXP, newLevel, leveledUp };
 };
 
 // Returns true if two dates fall on the same UTC calendar day
@@ -71,6 +85,16 @@ const requireAdminKey = (req, res, next) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
   next();
+};
+
+// Parses a client-supplied YYYY-MM-DD local date and returns a UTC-midnight Date for it.
+// Falls back to `now` if the format is invalid or the date is more than 2 days from server time
+// (guards against backdating streak claims).
+const parseLocalDate = (localDate, now) => {
+  if (typeof localDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(localDate)) return now;
+  const basis = new Date(localDate + "T00:00:00Z");
+  const diffMs = Math.abs(now - basis);
+  return diffMs <= 2 * 24 * 60 * 60 * 1000 ? basis : now;
 };
 
 const isSameUTCDay = (a, b) => {
@@ -304,16 +328,29 @@ router.post("/users", async (req, res) => {
   }
 });
 
-// Update user by ID
+// Update user by ID — requires current password to verify ownership
 router.patch("/users/:id", async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID format" });
     }
 
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: "Current password is required" });
+    }
+
+    const user = await db.collection("users").findOne({ _id: new ObjectId(req.params.id) });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
+
     const updates = { $set: {} };
     const allowedFields = ["username", "email", "preferences"];
-    
+
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updates.$set[field] = req.body[field];
@@ -324,19 +361,12 @@ router.patch("/users/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    const result = await db.collection("users").updateOne(
+    await db.collection("users").updateOne(
       { _id: new ObjectId(req.params.id) },
       updates
     );
 
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    res.status(200).json({ 
-      message: "User updated successfully",
-      modifiedCount: result.modifiedCount 
-    });
+    res.status(200).json({ message: "User updated successfully" });
   } catch (err) {
     console.error("Error updating user:", err);
     res.status(500).json({ error: "Internal Server Error" });
@@ -383,14 +413,26 @@ router.post("/users/:id/change-password", async (req, res) => {
   }
 });
 
-// Delete user by ID
+// Delete user by ID — requires current password to verify ownership
 router.delete("/users/:id", async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID format" });
     }
 
+    const { password } = req.body;
+    if (!password) {
+      return res.status(400).json({ error: "Password is required to delete account" });
+    }
+
     const userId = req.params.id;
+    const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: "Incorrect password" });
+    }
 
     // Delete user and all their entries
     await Promise.all([
@@ -563,19 +605,21 @@ router.post("/grapes", async (req, res) => {
     let streakUpdated = true;
     let xpResult = null;
     try {
+      const basis = parseLocalDate(req.body.localDate, now);
+
       const user = await db.collection("users").findOne({ _id: new ObjectId(userId) }, { projection: { streak: 1, lastStreakDate: 1 } });
       if (user) {
         const lastStreakDate = user.lastStreakDate ?? null;
         let newStreak = user.streak ?? 0;
-        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), now) && !isUTCYesterday(new Date(lastStreakDate), now))) {
+        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), basis) && !isUTCYesterday(new Date(lastStreakDate), basis))) {
           newStreak = 1;
-        } else if (isUTCYesterday(new Date(lastStreakDate), now)) {
+        } else if (isUTCYesterday(new Date(lastStreakDate), basis)) {
           newStreak = newStreak + 1;
         }
-        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), now)) {
+        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), basis)) {
           await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
-            { $set: { streak: newStreak, lastStreakDate: now } }
+            { $set: { streak: newStreak, lastStreakDate: basis } }
           );
         }
       }
@@ -782,19 +826,21 @@ router.post("/cogtri", async (req, res) => {
     let streakUpdated = true;
     let xpResult = null;
     try {
+      const basis = parseLocalDate(req.body.localDate, now);
+
       const user = await db.collection("users").findOne({ _id: new ObjectId(userId) }, { projection: { streak: 1, lastStreakDate: 1 } });
       if (user) {
         const lastStreakDate = user.lastStreakDate ?? null;
         let newStreak = user.streak ?? 0;
-        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), now) && !isUTCYesterday(new Date(lastStreakDate), now))) {
+        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), basis) && !isUTCYesterday(new Date(lastStreakDate), basis))) {
           newStreak = 1;
-        } else if (isUTCYesterday(new Date(lastStreakDate), now)) {
+        } else if (isUTCYesterday(new Date(lastStreakDate), basis)) {
           newStreak = newStreak + 1;
         }
-        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), now)) {
+        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), basis)) {
           await db.collection("users").updateOne(
             { _id: new ObjectId(userId) },
-            { $set: { streak: newStreak, lastStreakDate: now } }
+            { $set: { streak: newStreak, lastStreakDate: basis } }
           );
         }
       }
@@ -982,17 +1028,12 @@ router.patch("/users/:id/pet-feed", async (req, res) => {
       return res.status(200).json({ alreadyFed: true, petStats: user.petStats });
     }
 
-    // Compute new status based on new lastFed (now = happy)
-    const newPetStats = {
-      ...user.petStats,
-      lastFed: now,
-      status: "happy",
-    };
-
     await db.collection("users").updateOne(
       { _id: new ObjectId(req.params.id) },
-      { $set: { petStats: newPetStats } }
+      { $set: { "petStats.lastFed": now, "petStats.status": "happy" } }
     );
+
+    const newPetStats = { ...user.petStats, lastFed: now, status: "happy" };
 
     // Award XP for feeding — isolated so a failure doesn't break the feed response
     let xpResult = null;
@@ -1117,7 +1158,7 @@ router.get("/analytics/:userId", async (req, res) => {
       const diffMs = now - entryDate;
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
       const weekIndex = Math.floor(diffDays / 7);
-      if (weekIndex < 4) {
+      if (weekIndex >= 0 && weekIndex < 4) {
         weeklyCogtri[weekIndex]++;
       }
     }
