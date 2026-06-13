@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import config from "../../config";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
 
 interface User {
   _id: string;
@@ -35,6 +37,8 @@ const Settings = () => {
   const [success, setSuccess] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const { message, type, visible, showToast } = useToast();
 
   // Get userId from localStorage
   const getUserId = () => {
@@ -127,61 +131,44 @@ const Settings = () => {
     }
 
     try {
-      // First verify current password if changing password
+      // Handle password change separately via dedicated endpoint
       if (formData.newPassword) {
-        const loginResponse = await fetch(`${API_URL}/auth/login`, {
+        const pwResponse = await fetch(`${API_URL}/users/${userId}/change-password`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: user?.email,
-            password: formData.password,
+            currentPassword: formData.password,
+            newPassword: formData.newPassword,
           }),
         });
 
-        if (!loginResponse.ok) {
-          setError("Current password is incorrect");
+        if (!pwResponse.ok) {
+          const data = await pwResponse.json();
+          setError(data.error || "Failed to change password");
           return;
         }
       }
 
-      // Update user data
-      const updateData: any = {
-        username: formData.username,
-        email: formData.email,
-      };
-
-      // Include new password if changing
-      if (formData.newPassword) {
-        updateData.password = formData.newPassword;
-      }
-
+      // Update username / email via general PATCH
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+        }),
       });
 
       if (response.ok) {
-        setSuccess("Profile updated successfully!");
-        // Refresh user data
         await fetchUserData();
-        // Clear password fields
-        setFormData({
-          ...formData,
-          password: "",
-          newPassword: "",
-          confirmNewPassword: "",
-        });
-        setTimeout(() => {
-          setActiveModal(null);
-          setSuccess("");
-        }, 2000);
+        setFormData({ ...formData, password: "", newPassword: "", confirmNewPassword: "" });
+        showToast("Profile updated successfully!", "success");
+        setTimeout(() => setActiveModal(null), 2000);
       } else {
         const data = await response.json();
         setError(data.error || "Failed to update profile");
       }
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } catch {
       setError("An error occurred. Please try again.");
     }
   };
@@ -234,11 +221,9 @@ const Settings = () => {
       link.click();
       document.body.removeChild(link);
 
-      setSuccess("Data exported successfully!");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      setError("Failed to export data");
+      showToast("Data exported successfully!", "success");
+    } catch {
+      showToast("Failed to export data. Please try again.", "error");
     } finally {
       setIsExporting(false);
     }
@@ -261,18 +246,15 @@ const Settings = () => {
       });
 
       if (response.ok) {
-        // Clear localStorage
         localStorage.removeItem("userId");
-        // Show success message
-        alert("Your account and all data have been deleted.");
-        // Redirect to login
-        navigate("/user/login");
+        sessionStorage.removeItem("sessionVerified");
+        showToast("Your account and all data have been deleted.", "info");
+        setTimeout(() => navigate("/user/login"), 1500);
       } else {
         setError("Failed to delete account");
         setIsDeleting(false);
       }
-    } catch (error) {
-      console.error("Error deleting account:", error);
+    } catch {
       setError("An error occurred. Please try again.");
       setIsDeleting(false);
     }
@@ -281,19 +263,24 @@ const Settings = () => {
   // Logout
   const handleLogout = () => {
     localStorage.removeItem("userId");
+    sessionStorage.removeItem("sessionVerified");
     navigate("/user/login");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral flex items-center justify-center">
-        <p className="text-dark text-xl">Loading...</p>
+      <div className="min-h-dvh bg-neutral flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
+          <p className="text-dark text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral flex flex-col pb-20">
+    <div className="min-h-dvh bg-neutral flex flex-col pb-20">
+      <Toast message={message} type={type} visible={visible} />
       {/* Header */}
       <div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
@@ -368,7 +355,7 @@ const Settings = () => {
       <div className="m-6">
         <button
           onClick={handleLogout}
-          className="w-full bg-red-400 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-600 transition-colors"
+          className="w-full bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-600 transition-colors"
         >
           Log Out
         </button>
@@ -515,7 +502,7 @@ const Settings = () => {
                 )}
 
                 {/* Data Export */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <div className="bg-neutral border-2 border-gray-200 rounded-xl p-4">
                   <h3 className="font-bold text-dark mb-2">📊 Export Your Data</h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Download all your GRAPES and CogTri entries as a CSV file.
@@ -523,7 +510,7 @@ const Settings = () => {
                   <button
                     onClick={handleDataExport}
                     disabled={isExporting}
-                    className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    className="w-full bg-primary-base text-highlight font-bold py-3 rounded-lg hover:bg-dark transition-colors disabled:opacity-50"
                   >
                     {isExporting ? "Exporting..." : "📥 Download Data"}
                   </button>

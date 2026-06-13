@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import config from "../../config";
 import instructionsImg from "../../assets/instructions.jpg";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
 
 interface CogTriEntry {
   _id?: string;
@@ -33,13 +35,16 @@ const Cogtri = () => {
 
   // Confirmation and History modals
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] =
     useState<CogTriEntry | null>(null);
   const [isFullyFilled, setIsFullyFilled] = useState(false);
 
-  // Instructions toggle
-  const [instructionsOpen, setInstructionsOpen] = useState(true);
+  // Instructions toggle — persisted so it doesn't re-expand every visit
+  const [instructionsOpen, setInstructionsOpen] = useState(
+    () => localStorage.getItem("cogtri-instructions") !== "false"
+  );
 
   // About toggle
   const [aboutOpen, setAboutOpen] = useState(false);
@@ -47,6 +52,9 @@ const Cogtri = () => {
   // History data from MongoDB
   const [historyEntries, setHistoryEntries] = useState<CogTriEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { message, type, visible, showToast } = useToast();
 
   // Get userId from localStorage
   const getUserId = () => {
@@ -74,13 +82,10 @@ const Cogtri = () => {
       if (response.ok) {
         const data = await response.json();
         setHistoryEntries(data);
-        console.log("Fetched CogTri history:", data);
       } else {
-        console.error("Failed to fetch history:", response.status);
         setHistoryEntries([]);
       }
-    } catch (error) {
-      console.error("Error fetching history:", error);
+    } catch {
     } finally {
       setLoadingHistory(false);
     }
@@ -120,7 +125,7 @@ const Cogtri = () => {
     // Check if at least one field is filled
     const hasContent = Object.values(entry).some((val) => val.trim() !== "");
     if (!hasContent) {
-      alert("Please fill in at least one field before saving.");
+      showToast("Please fill in at least one field before saving.", "error");
       return;
     }
 
@@ -128,19 +133,35 @@ const Cogtri = () => {
     const allFieldsFilled = Object.values(entry).every((val) => val.trim() !== "");
     setIsFullyFilled(allFieldsFilled);
 
-    // Always show modal for confirmation
+    // Warn if user already has an entry for today
+    const today = new Date();
+    const hasEntryToday = historyEntries.some((e) => {
+      const d = new Date(e.date);
+      return (
+        d.getUTCFullYear() === today.getUTCFullYear() &&
+        d.getUTCMonth() === today.getUTCMonth() &&
+        d.getUTCDate() === today.getUTCDate()
+      );
+    });
+
+    if (hasEntryToday) {
+      setShowDuplicateWarning(true);
+      return;
+    }
+
     setShowSaveModal(true);
   };
 
   const handleConfirmSave = async (complete: boolean) => {
     const userId = getUserId();
     if (!userId) {
-      alert("You must be logged in to save entries.");
+      showToast("You must be logged in to save entries.", "error");
       setShowSaveModal(false);
       return;
     }
 
-    // Prepare data for MongoDB
+    setIsSaving(true);
+
     const dataToSave = {
       userId,
       date: new Date().toISOString(),
@@ -151,8 +172,6 @@ const Cogtri = () => {
       complete,
     };
 
-    console.log("Saving to MongoDB:", dataToSave);
-
     try {
       const response = await fetch(`${API_URL}/cogtri`, {
         method: "POST",
@@ -161,30 +180,25 @@ const Cogtri = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("Saved successfully:", result);
-
-        // Clear form after save
-        setEntry({
-          situation: "",
-          thoughts: "",
-          feelings: "",
-          behavior: "",
-        });
-
-        // Refresh history to show new entry
+        const data = await response.json();
+        setEntry({ situation: "", thoughts: "", feelings: "", behavior: "" });
         await fetchHistory();
-
         setShowSaveModal(false);
-        alert("Entry saved successfully!");
+        showToast("Entry saved successfully!", "success");
+        if (data.leveledUp) {
+          showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
+        }
+        if (data.streakUpdated === false) {
+          showToast("Entry saved, but your streak couldn't be updated right now.", "info");
+        }
       } else {
         const error = await response.json();
-        console.error("Save failed:", error);
-        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+        showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
       }
-    } catch (error) {
-      console.error("Error saving:", error);
-      alert("Error saving entry. Please check your connection.");
+    } catch {
+      showToast("Error saving entry. Please check your connection.", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -208,10 +222,16 @@ const Cogtri = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-base flex flex-col">
+    <div className="min-h-dvh bg-neutral flex flex-col">
+      <Toast message={message} type={type} visible={visible} />
+      {/* Header */}
+      <div className="bg-primary-light p-4 text-center">
+        <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
+          CogTri
+        </h1>
+      </div>
       {/* CogTri Section */}
-      <div className="px-4 pt-4 pb-10">
-        <h1 className="text-highlight text-3xl font-bold mb-4 mx-6">CogTri🔺</h1>
+      <div className="bg-primary-base px-4 pt-4 pb-10">
 
         {/* Triangle Container */}
         <div className="relative w-full max-w-md mx-auto aspect-[1.25] min-[410px]:aspect-[1.5]" >
@@ -307,7 +327,11 @@ const Cogtri = () => {
       <div className="px-6 py-4 bg-highlight">
         {/* Clickable Header */}
         <button
-          onClick={() => setInstructionsOpen(!instructionsOpen)}
+          onClick={() => {
+            const next = !instructionsOpen;
+            setInstructionsOpen(next);
+            localStorage.setItem("cogtri-instructions", String(next));
+          }}
           className="w-full flex items-center justify-between text-left"
         >
           <h2 className="text-dark text-2xl font-bold">Instructions</h2>
@@ -546,6 +570,41 @@ const Cogtri = () => {
         </div>
       )}
 
+      {/* Duplicate Day Warning Modal */}
+      {showDuplicateWarning && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDuplicateWarning(false)}
+        >
+          <div
+            className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-dark mb-2">Already saved today</h3>
+            <p className="text-sm text-gray-600 mb-6">
+              You already have a CogTri entry for today. Save another one anyway?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateWarning(false)}
+                className="flex-1 py-2 rounded-xl border border-gray-300 text-dark font-semibold text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDuplicateWarning(false);
+                  setShowSaveModal(true);
+                }}
+                className="flex-1 py-2 rounded-xl bg-primary-light text-highlight font-semibold text-sm"
+              >
+                Save Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Save Confirmation Modal */}
       {showSaveModal && (
         <div
@@ -567,15 +626,16 @@ const Cogtri = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(true)}
-                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-light text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-primary-base transition-colors disabled:opacity-60"
                   >
-                    Done ✓
+                    {isSaving ? "Saving..." : "Done ✓"}
                   </button>
                 </div>
               </>
@@ -593,15 +653,16 @@ const Cogtri = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(false)}
-                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-yellow-500 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-60"
                   >
-                    Save Partial
+                    {isSaving ? "Saving..." : "Save Partial"}
                   </button>
                 </div>
               </>

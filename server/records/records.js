@@ -18,6 +18,76 @@ const getNormalizedPetType = (petStats) => {
 
 const hasSelectedPet = (petStats) => getNormalizedPetType(petStats) !== null;
 
+// XP awarded per action
+const XP_REWARDS = {
+  grapes: 10,
+  cogtri: 10,
+  feed: 5,
+};
+
+// Total XP required to reach each level (index = level number)
+const LEVEL_THRESHOLDS = [0, 0, 50, 120, 220, 350, 520, 730, 990, 1300, 1670];
+const MAX_LEVEL = 10;
+
+// Returns the level a given total XP corresponds to
+const getLevelForXP = (xp) => {
+  let level = 1;
+  for (let i = LEVEL_THRESHOLDS.length - 1; i >= 1; i--) {
+    if (xp >= LEVEL_THRESHOLDS[i]) {
+      level = i;
+      break;
+    }
+  }
+  return Math.min(level, MAX_LEVEL);
+};
+
+// Adds XP to a user's petStats, recomputes level, and persists the update.
+// Returns { newExperience, newLevel, leveledUp }
+const awardXP = async (userId, amount) => {
+  const user = await db.collection("users").findOne(
+    { _id: new ObjectId(userId) },
+    { projection: { petStats: 1 } }
+  );
+  if (!user) return null;
+
+  const currentXP = user.petStats?.experience ?? 0;
+  const currentLevel = user.petStats?.level ?? 1;
+  const newXP = currentLevel >= MAX_LEVEL ? currentXP : currentXP + amount;
+  const newLevel = getLevelForXP(newXP);
+
+  await db.collection("users").updateOne(
+    { _id: new ObjectId(userId) },
+    { $set: { "petStats.experience": newXP, "petStats.level": newLevel } }
+  );
+
+  return { newExperience: newXP, newLevel, leveledUp: newLevel > currentLevel };
+};
+
+// Returns true if two dates fall on the same UTC calendar day
+// Rejects requests to admin-only routes that lack the correct X-Admin-Key header
+const requireAdminKey = (req, res, next) => {
+  const key = req.headers["x-admin-key"];
+  if (!key || key !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+};
+
+const isSameUTCDay = (a, b) => {
+  return (
+    a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate()
+  );
+};
+
+// Returns true if date `a` is exactly one UTC calendar day before date `b`
+const isUTCYesterday = (a, b) => {
+  const yesterday = new Date(b);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  return isSameUTCDay(a, yesterday);
+};
+
 /**
  * ======================
  * AUTHENTICATION
@@ -71,11 +141,11 @@ router.post("/auth/login", async (req, res) => {
  * ======================
  */
 
-// Get all users (admin only - consider adding auth)
-router.get("/users", async (req, res) => {
+// Get all users (admin only)
+router.get("/users", requireAdminKey, async (req, res) => {
   try {
     const collection = db.collection("users");
-    const results = await collection.find({}).toArray();
+    const results = await collection.find({}, { projection: { password: 0 } }).toArray();
     res.status(200).json(results);
   } catch (err) {
     console.error("Error fetching users:", err);
@@ -201,6 +271,7 @@ router.post("/users", async (req, res) => {
       password: hashedPassword, // Store hashed password
       createdAt: new Date(),
       streak: 0,
+      lastStreakDate: null,
       petStats: {
         type: null,
         status: "happy", // happy, neutral, sad
@@ -241,7 +312,7 @@ router.patch("/users/:id", async (req, res) => {
     }
 
     const updates = { $set: {} };
-    const allowedFields = ["username", "email", "password", "streak", "petStats", "preferences"];
+    const allowedFields = ["username", "email", "preferences"];
     
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -268,6 +339,46 @@ router.patch("/users/:id", async (req, res) => {
     });
   } catch (err) {
     console.error("Error updating user:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Change password — verifies current password before hashing and storing the new one
+router.post("/users/:id/change-password", async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "currentPassword and newPassword are required" });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "New password must be at least 6 characters" });
+    }
+
+    const user = await db.collection("users").findOne({ _id: new ObjectId(req.params.id) });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isValid = await bcrypt.compare(currentPassword, user.password);
+    if (!isValid) {
+      return res.status(401).json({ error: "Current password is incorrect" });
+    }
+
+    const saltRounds = 10;
+    const hashedNew = await bcrypt.hash(newPassword, saltRounds);
+
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { password: hashedNew } }
+    );
+
+    res.status(200).json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("Error changing password:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
@@ -302,7 +413,7 @@ router.delete("/users/:id", async (req, res) => {
  */
 
 // Get all GRAPES entries (admin/dev use)
-router.get("/grapes", async (req, res) => {
+router.get("/grapes", requireAdminKey, async (req, res) => {
   try {
     const results = await db.collection("grapes-entries")
       .find({})
@@ -402,23 +513,85 @@ router.post("/grapes", async (req, res) => {
       return res.status(400).json({ error: "userId is required" });
     }
 
-    const newEntry = {
-      userId,
-      date: date ? new Date(date) : new Date(),
-      gentle: gentle || "",
-      recreation: recreation || "",
-      accomplishment: accomplishment || "",
-      pleasure: pleasure || "",
-      exercise: exercise || "",
-      social: social || "",
-      completed: completed || false,
-      createdAt: new Date(),
-    };
+    // Check for an existing entry today (UTC day) — upsert instead of duplicate
+    const now = new Date();
+    const startOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const endOfDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
 
-    const result = await db.collection("grapes-entries").insertOne(newEntry);
-    res.status(201).json({ 
+    const existing = await db.collection("grapes-entries").findOne({
+      userId,
+      date: { $gte: startOfDay, $lt: endOfDay },
+    });
+
+    let result;
+    if (existing) {
+      // Update the existing entry for today
+      await db.collection("grapes-entries").updateOne(
+        { _id: existing._id },
+        {
+          $set: {
+            gentle: gentle || "",
+            recreation: recreation || "",
+            accomplishment: accomplishment || "",
+            pleasure: pleasure || "",
+            exercise: exercise || "",
+            social: social || "",
+            completed: completed || false,
+            updatedAt: now,
+          },
+        }
+      );
+      result = { insertedId: existing._id, updated: true };
+    } else {
+      const newEntry = {
+        userId,
+        date: date ? new Date(date) : now,
+        gentle: gentle || "",
+        recreation: recreation || "",
+        accomplishment: accomplishment || "",
+        pleasure: pleasure || "",
+        exercise: exercise || "",
+        social: social || "",
+        completed: completed || false,
+        createdAt: now,
+      };
+      const inserted = await db.collection("grapes-entries").insertOne(newEntry);
+      result = { insertedId: inserted.insertedId, updated: false };
+    }
+
+    // Streak + XP updates — isolated so a failure here doesn't roll back the saved entry
+    let streakUpdated = true;
+    let xpResult = null;
+    try {
+      const user = await db.collection("users").findOne({ _id: new ObjectId(userId) }, { projection: { streak: 1, lastStreakDate: 1 } });
+      if (user) {
+        const lastStreakDate = user.lastStreakDate ?? null;
+        let newStreak = user.streak ?? 0;
+        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), now) && !isUTCYesterday(new Date(lastStreakDate), now))) {
+          newStreak = 1;
+        } else if (isUTCYesterday(new Date(lastStreakDate), now)) {
+          newStreak = newStreak + 1;
+        }
+        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), now)) {
+          await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { streak: newStreak, lastStreakDate: now } }
+          );
+        }
+      }
+      xpResult = await awardXP(userId, XP_REWARDS.grapes);
+    } catch (streakErr) {
+      console.error("Streak/XP update failed after GRAPES save:", streakErr);
+      streakUpdated = false;
+    }
+
+    res.status(201).json({
       insertedId: result.insertedId,
-      message: "GRAPES entry created successfully" 
+      updated: result.updated,
+      streakUpdated,
+      leveledUp: xpResult?.leveledUp ?? false,
+      newLevel: xpResult?.newLevel ?? null,
+      message: result.updated ? "GRAPES entry updated successfully" : "GRAPES entry created successfully",
     });
   } catch (err) {
     console.error("Error creating GRAPES entry:", err);
@@ -491,7 +664,7 @@ router.delete("/grapes/:id", async (req, res) => {
  */
 
 // Get all CogTri entries (admin/dev use)
-router.get("/cogtri", async (req, res) => {
+router.get("/cogtri", requireAdminKey, async (req, res) => {
   try {
     const results = await db.collection("cogtri-entries")
       .find({})
@@ -603,9 +776,40 @@ router.post("/cogtri", async (req, res) => {
     };
 
     const result = await db.collection("cogtri-entries").insertOne(newEntry);
-    res.status(201).json({ 
+
+    // Streak + XP updates — isolated so a failure here doesn't roll back the saved entry
+    const now = new Date();
+    let streakUpdated = true;
+    let xpResult = null;
+    try {
+      const user = await db.collection("users").findOne({ _id: new ObjectId(userId) }, { projection: { streak: 1, lastStreakDate: 1 } });
+      if (user) {
+        const lastStreakDate = user.lastStreakDate ?? null;
+        let newStreak = user.streak ?? 0;
+        if (lastStreakDate === null || (!isSameUTCDay(new Date(lastStreakDate), now) && !isUTCYesterday(new Date(lastStreakDate), now))) {
+          newStreak = 1;
+        } else if (isUTCYesterday(new Date(lastStreakDate), now)) {
+          newStreak = newStreak + 1;
+        }
+        if (lastStreakDate === null || !isSameUTCDay(new Date(lastStreakDate), now)) {
+          await db.collection("users").updateOne(
+            { _id: new ObjectId(userId) },
+            { $set: { streak: newStreak, lastStreakDate: now } }
+          );
+        }
+      }
+      xpResult = await awardXP(userId, XP_REWARDS.cogtri);
+    } catch (streakErr) {
+      console.error("Streak/XP update failed after CogTri save:", streakErr);
+      streakUpdated = false;
+    }
+
+    res.status(201).json({
       insertedId: result.insertedId,
-      message: "CogTri entry created successfully" 
+      streakUpdated,
+      leveledUp: xpResult?.leveledUp ?? false,
+      newLevel: xpResult?.newLevel ?? null,
+      message: "CogTri entry created successfully",
     });
   } catch (err) {
     console.error("Error creating CogTri entry:", err);
@@ -686,13 +890,25 @@ router.get("/dashboard/:userId", async (req, res) => {
       return res.status(400).json({ error: "Invalid ID format" });
     }
 
-    // Fetch user, latest GRAPES, latest CogTri in parallel
-    const [user, latestGrapes, latestCogTri, grapeCount, cogtriCount] = await Promise.all([
+    // Query current month with a 1-day buffer on each side to handle timezone edge cases
+    // (e.g. a user in UTC+8 posting at 11pm local time gets stored as next UTC day)
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    monthStart.setDate(monthStart.getDate() - 1); // 1-day buffer before
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    monthEnd.setDate(monthEnd.getDate() + 1); // 1-day buffer after
+
+    const monthFilter = { userId, date: { $gte: monthStart, $lte: monthEnd } };
+
+    // Fetch everything in parallel
+    const [user, latestGrapes, latestCogTri, grapeCount, cogtriCount, grapeDates, cogtriDates] = await Promise.all([
       db.collection("users").findOne({ _id: new ObjectId(userId) }),
       db.collection("grapes-entries").findOne({ userId }, { sort: { date: -1 } }),
       db.collection("cogtri-entries").findOne({ userId }, { sort: { date: -1 } }),
       db.collection("grapes-entries").countDocuments({ userId, completed: true }),
       db.collection("cogtri-entries").countDocuments({ userId, complete: true }),
+      db.collection("grapes-entries").find(monthFilter, { projection: { date: 1 } }).toArray(),
+      db.collection("cogtri-entries").find(monthFilter, { projection: { date: 1 } }).toArray(),
     ]);
 
     if (!user) {
@@ -701,11 +917,33 @@ router.get("/dashboard/:userId", async (req, res) => {
 
     const { password, ...userWithoutPassword } = user;
 
+    // Streak reset check — runs every time the dashboard loads (Option A)
+    const lastStreakDate = user.lastStreakDate ?? null;
+    if (user.streak > 0) {
+      const shouldReset =
+        lastStreakDate === null || // streak with no recorded date = inconsistent, reset
+        (!isSameUTCDay(new Date(lastStreakDate), now) && !isUTCYesterday(new Date(lastStreakDate), now));
+      if (shouldReset) {
+        await db.collection("users").updateOne(
+          { _id: new ObjectId(userId) },
+          { $set: { streak: 0 } }
+        );
+        userWithoutPassword.streak = 0;
+      }
+    }
+
+    // Combine entry dates from both collections
+    const activityDates = [
+      ...grapeDates.map(e => e.date),
+      ...cogtriDates.map(e => e.date),
+    ];
+
     res.status(200).json({
       user: userWithoutPassword,
       requiresPetSelection: !hasSelectedPet(user.petStats),
       latestGrapes,
       latestCogTri,
+      activityDates,
       stats: {
         completedGrapesEntries: grapeCount,
         completedCogtriEntries: cogtriCount,
@@ -713,6 +951,187 @@ router.get("/dashboard/:userId", async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching dashboard data:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Feed pet
+router.patch("/users/:id/pet-feed", async (req, res) => {
+  try {
+    if (!ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const user = await db.collection("users").findOne(
+      { _id: new ObjectId(req.params.id) },
+      { projection: { petStats: 1 } }
+    );
+
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Reject if user has not selected a pet yet
+    if (!hasSelectedPet(user.petStats)) {
+      return res.status(400).json({ error: "No pet selected" });
+    }
+
+    const now = new Date();
+    const lastFed = user.petStats?.lastFed ?? null;
+
+    // Already fed today — return early without writing
+    if (lastFed && isSameUTCDay(new Date(lastFed), now)) {
+      return res.status(200).json({ alreadyFed: true, petStats: user.petStats });
+    }
+
+    // Compute new status based on new lastFed (now = happy)
+    const newPetStats = {
+      ...user.petStats,
+      lastFed: now,
+      status: "happy",
+    };
+
+    await db.collection("users").updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { petStats: newPetStats } }
+    );
+
+    // Award XP for feeding — isolated so a failure doesn't break the feed response
+    let xpResult = null;
+    try {
+      xpResult = await awardXP(req.params.id, XP_REWARDS.feed);
+    } catch (xpErr) {
+      console.error("XP award failed after feed:", xpErr);
+    }
+
+    res.status(200).json({
+      alreadyFed: false,
+      petStats: newPetStats,
+      leveledUp: xpResult?.leveledUp ?? false,
+      newLevel: xpResult?.newLevel ?? null,
+    });
+  } catch (err) {
+    console.error("Error feeding pet:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get activity dates for a given month (used for calendar navigation)
+router.get("/activity-dates/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { month, year } = req.query;
+
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const m = parseInt(month);
+    const y = parseInt(year);
+
+    if (isNaN(m) || isNaN(y) || m < 0 || m > 11) {
+      return res.status(400).json({ error: "Invalid month or year" });
+    }
+
+    // 1-day buffer on each side to handle timezone edge cases
+    const monthStart = new Date(y, m, 1);
+    monthStart.setDate(monthStart.getDate() - 1);
+    const monthEnd = new Date(y, m + 1, 1);
+    monthEnd.setDate(monthEnd.getDate() + 1);
+
+    const monthFilter = { userId, date: { $gte: monthStart, $lte: monthEnd } };
+
+    const [grapeDates, cogtriDates] = await Promise.all([
+      db.collection("grapes-entries").find(monthFilter, { projection: { date: 1 } }).toArray(),
+      db.collection("cogtri-entries").find(monthFilter, { projection: { date: 1 } }).toArray(),
+    ]);
+
+    const activityDates = [
+      ...grapeDates.map(e => e.date),
+      ...cogtriDates.map(e => e.date),
+    ];
+
+    res.status(200).json({ activityDates });
+  } catch (err) {
+    console.error("Error fetching activity dates:", err);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Analytics endpoint — derives all stats from existing entry data
+router.get("/analytics/:userId", async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+
+    const [grapesEntries, cogtriEntries] = await Promise.all([
+      db.collection("grapes-entries").find({ userId }, { projection: { date: 1, gentle: 1, recreation: 1, accomplishment: 1, pleasure: 1, exercise: 1, social: 1 } }).toArray(),
+      db.collection("cogtri-entries").find({ userId }, { projection: { date: 1 } }).toArray(),
+    ]);
+
+    // --- Longest streak & total active days this year ---
+    // Build a deduplicated set of UTC date strings across both collections
+    const toUTCDateStr = (d) => {
+      const dt = new Date(d);
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+    };
+
+    const allDates = new Set([
+      ...grapesEntries.map(e => toUTCDateStr(e.date)),
+      ...cogtriEntries.map(e => toUTCDateStr(e.date)),
+    ]);
+
+    const sortedDates = Array.from(allDates).sort();
+
+    let longestStreak = 0;
+    let currentStreak = 0;
+    let prevDate = null;
+    for (const dateStr of sortedDates) {
+      if (!prevDate) {
+        currentStreak = 1;
+      } else {
+        const prev = new Date(prevDate + "T00:00:00Z");
+        const curr = new Date(dateStr + "T00:00:00Z");
+        const diffDays = (curr - prev) / (1000 * 60 * 60 * 24);
+        currentStreak = diffDays === 1 ? currentStreak + 1 : 1;
+      }
+      longestStreak = Math.max(longestStreak, currentStreak);
+      prevDate = dateStr;
+    }
+
+    const thisYear = new Date().getUTCFullYear();
+    const totalActiveDaysThisYear = sortedDates.filter(d => d.startsWith(String(thisYear))).length;
+
+    // --- GRAPES category fill counts ---
+    const categories = ["gentle", "recreation", "accomplishment", "pleasure", "exercise", "social"];
+    const grapesCategoryCounts = {};
+    for (const cat of categories) {
+      grapesCategoryCounts[cat] = grapesEntries.filter(e => e[cat] && e[cat].trim() !== "").length;
+    }
+
+    // --- CogTri entries per week for the last 4 weeks ---
+    const now = new Date();
+    const weeklyCogtri = [0, 0, 0, 0]; // index 0 = current week, 3 = 4 weeks ago
+    for (const entry of cogtriEntries) {
+      const entryDate = new Date(entry.date);
+      const diffMs = now - entryDate;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const weekIndex = Math.floor(diffDays / 7);
+      if (weekIndex < 4) {
+        weeklyCogtri[weekIndex]++;
+      }
+    }
+
+    res.status(200).json({
+      longestStreak,
+      totalActiveDaysThisYear,
+      grapesCategoryCounts,
+      weeklyCogtri,
+      totalGrapesEntries: grapesEntries.length,
+      totalCogtriEntries: cogtriEntries.length,
+    });
+  } catch (err) {
+    console.error("Error fetching analytics:", err);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

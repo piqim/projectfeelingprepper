@@ -2,10 +2,13 @@ import { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
 import Footer from "./components/Footer.tsx";
+import OfflineBanner from "./components/OfflineBanner.tsx";
+import { useNetworkStatus } from "./hooks/useNetworkStatus.ts";
 
 
 const App = () => {
   const [isLandscape, setIsLandscape] = useState(false);
+  const isOnline = useNetworkStatus();
 
   useEffect(() => {
     const updateOrientation = () => {
@@ -61,6 +64,7 @@ const App = () => {
   return (
     <div className="w-max-[530px] h-max-[930px] mx-auto bg-white">
       <Navbar />
+      <OfflineBanner visible={!isOnline} />
       <Outlet />
       <Footer />
     </div>

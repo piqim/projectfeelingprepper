@@ -20,6 +20,7 @@ import Grapes from "./components/pages/Grapes.tsx";
 import Learnmore from "./components/pages/Learnmore.tsx";
 import Settings from "./components/pages/Settings.tsx";
 import Tipp from "./components/pages/Tipp.tsx";
+import Analytics from "./components/pages/Analytics.tsx";
 import Dev from "./components/pages/Dev.tsx";
 
 /* ROUTE(S) */
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
       {
         path: "learnmore",
         children: [{ index: true, element: <Learnmore /> }],
+      },
+      {
+        path: "analytics",
+        children: [{ index: true, element: <Analytics /> }],
       },
     ],
   },

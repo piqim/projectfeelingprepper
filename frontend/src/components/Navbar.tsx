@@ -14,6 +14,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(false);
 
   // API base URL from config
   const API_URL = config.API_URL;
@@ -34,20 +35,20 @@ const Navbar = () => {
     const userId = localStorage.getItem("userId");
 
     if (!userId) {
-      // User not logged in
       return;
     }
 
+    setLoadingUser(true);
     try {
       const response = await fetch(`${API_URL}/users/${userId}`);
       if (response.ok) {
         const data = await response.json();
         setUser(data);
-      } else {
-        console.error("Failed to fetch user data");
       }
-    } catch (error) {
-      console.error("Error fetching user:", error);
+    } catch {
+      // silently fail — user sees the profile section without a name
+    } finally {
+      setLoadingUser(false);
     }
   };
 
@@ -56,8 +57,8 @@ const Navbar = () => {
 
     // Clear auth/session state
     localStorage.removeItem("userId");
+    sessionStorage.removeItem("sessionVerified");
     setUser(null);
-    console.log("Logout clicked");
 
     // Navigate to login page
     navigate("/user/login");
@@ -160,13 +161,17 @@ const Navbar = () => {
             <div className="flex items-center gap-4">
               {/* Profile Avatar with Initial */}
               <div className="w-16 h-16 bg-gradient-to-br from-primary-base to-primary-light rounded-full flex items-center justify-center shadow-md">
-                <span className="text-2xl font-bold text-highlight">
-                  {getUserInitial()}
-                </span>
+                {loadingUser ? (
+                  <div className="w-6 h-6 border-2 border-highlight border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span className="text-2xl font-bold text-highlight">
+                    {getUserInitial()}
+                  </span>
+                )}
               </div>
               <div>
                 <p className="font-bold text-lg text-dark">
-                  {user?.username || "Guest"}
+                  {loadingUser ? "..." : (user?.username || "Guest")}
                 </p>
                 <p className="text-sm text-gray-600">
                   {user ? "User Profile" : "Not logged in"}
@@ -238,6 +243,28 @@ const Navbar = () => {
                 </Link>
               </div>
             </div>
+
+            {/* Analytics Link */}
+            <Link
+              to="/analytics"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-3 mt-2 rounded-lg hover:bg-primary-light/10 text-dark font-semibold transition-all duration-200 hover:translate-x-1"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              Analytics
+            </Link>
 
             {/* Learn More Link */}
             <Link

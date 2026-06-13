@@ -40,6 +40,8 @@ interface CogTriEntry {
 }
 
 const Dev = () => {
+  const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem("devAdminKey") ?? "");
+
   // Connection status
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "testing" | "connected" | "error"
@@ -64,13 +66,15 @@ const Dev = () => {
   // API base URL from config
   const API_URL = config.API_URL;
 
+  const adminHeaders = () => ({ "X-Admin-Key": adminKey });
+
   // Test connection to server
   const testConnection = async () => {
     setConnectionStatus("testing");
     setConnectionMessage("Testing connection...");
 
     try {
-      const response = await fetch(`${API_URL}/users`);
+      const response = await fetch(`${API_URL}/users`, { headers: adminHeaders() });
       if (response.ok) {
         setConnectionStatus("connected");
         setConnectionMessage("✓ Successfully connected to MongoDB server!");
@@ -88,7 +92,7 @@ const Dev = () => {
   const fetchUsers = async () => {
     setLoadingUsers(true);
     try {
-      const response = await fetch(`${API_URL}/users`);
+      const response = await fetch(`${API_URL}/users`, { headers: adminHeaders() });
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
@@ -106,9 +110,7 @@ const Dev = () => {
   const fetchGrapesEntries = async () => {
     setLoadingGrapes(true);
     try {
-      // Note: This endpoint doesn't exist in your current server.js
-      // You'll need to add GET /grapes to fetch all entries
-      const response = await fetch(`${API_URL}/grapes`);
+      const response = await fetch(`${API_URL}/grapes`, { headers: adminHeaders() });
       if (response.ok) {
         const data = await response.json();
         setGrapesEntries(data);
@@ -126,9 +128,7 @@ const Dev = () => {
   const fetchCogtriEntries = async () => {
     setLoadingCogtri(true);
     try {
-      // Note: This endpoint doesn't exist in your current server.js
-      // You'll need to add GET /cogtri to fetch all entries
-      const response = await fetch(`${API_URL}/cogtri`);
+      const response = await fetch(`${API_URL}/cogtri`, { headers: adminHeaders() });
       if (response.ok) {
         const data = await response.json();
         setCogtriEntries(data);
@@ -161,6 +161,21 @@ const Dev = () => {
         <p className="text-gray-600">
           Testing MongoDB connections and viewing collections
         </p>
+      </div>
+
+      {/* Admin Key */}
+      <div className="bg-white rounded-2xl shadow-lg p-4 mb-6">
+        <label className="block text-sm font-bold text-dark mb-2">Admin Key</label>
+        <input
+          type="password"
+          value={adminKey}
+          onChange={(e) => {
+            setAdminKey(e.target.value);
+            sessionStorage.setItem("devAdminKey", e.target.value);
+          }}
+          placeholder="Enter admin key..."
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+        />
       </div>
 
       {/* Connection Status */}
@@ -684,6 +699,25 @@ const Dev = () => {
                 fill="none"
               />
             </svg>
+          </div>
+
+          {/* Orange to feed */}
+          <div className="
+                          absolute 
+                          z-10
+                          top-0
+                          right-0
+                          " 
+          id="orange">
+            <img src="/src/assets/orange.png" alt="Orange to feed" 
+              className="
+              w-12
+              h-12
+              transition-transform  
+              cursor-grab       
+              hover:animate-spin
+              " 
+            />
           </div>
 
 

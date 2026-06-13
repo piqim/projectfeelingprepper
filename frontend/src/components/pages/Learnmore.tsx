@@ -1,10 +1,10 @@
 const Learnmore = () => {
   return (
-    <div className="min-h-screen bg-neutral pb-20">
+    <div className="min-h-dvh bg-neutral pb-20">
       {/* Header */}
-      <div className="px-6 pt-6 pb-4 bg-gradient-to-r from-primary-light to-primary-base">
-        <h1 className="text-highlight text-3xl font-bold montserrat-alternates">
-          Learn More 🤔
+      <div className="bg-primary-light p-4 text-center">
+        <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
+          Learn More
         </h1>
       </div>
 

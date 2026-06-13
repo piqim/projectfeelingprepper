@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import config from "../config";
+import { useToast } from "../hooks/useToast";
+import Toast from "./Toast";
+
+// Mirrored from backend — keeps XP bar in sync without an extra fetch
+const LEVEL_THRESHOLDS = [0, 0, 50, 120, 220, 350, 520, 730, 990, 1300, 1670];
+const MAX_LEVEL = 10;
 
 interface User {
   _id: string;
@@ -10,6 +16,7 @@ interface User {
   petStats?: {
     type?: string | null;
     status: "happy" | "neutral" | "sad";
+    lastFed?: string | null;
     level: number;
     experience: number;
   };
@@ -37,8 +44,25 @@ interface CogTriEntry {
   date: string;
 }
 
+const isSameUTCDay = (a: Date, b: Date) =>
+  a.getUTCFullYear() === b.getUTCFullYear() &&
+  a.getUTCMonth() === b.getUTCMonth() &&
+  a.getUTCDate() === b.getUTCDate();
+
+const getDerivedPetStatus = (lastFed?: string | Date | null): "happy" | "neutral" | "sad" => {
+  if (!lastFed) return "sad";
+  const now = new Date();
+  const fed = new Date(lastFed);
+  if (isSameUTCDay(fed, now)) return "happy";
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  if (isSameUTCDay(fed, yesterday)) return "neutral";
+  return "sad";
+};
+
 const Home = () => {
   const navigate = useNavigate();
+  const { message, type, visible, showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [requiresPetSelection, setRequiresPetSelection] = useState(false);
@@ -46,12 +70,27 @@ const Home = () => {
   const [petSelectionError, setPetSelectionError] = useState("");
   const [latestGrapes, setLatestGrapes] = useState<GrapesEntry | null>(null);
   const [latestCogTri, setLatestCogTri] = useState<CogTriEntry | null>(null);
+  const [activeDays, setActiveDays] = useState<Set<number>>(new Set());
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth());
+  const [viewYear, setViewYear] = useState(new Date().getFullYear());
+  const [calendarLoading, setCalendarLoading] = useState(false);
+  const [feedAnim, setFeedAnim] = useState<"idle" | "feeding" | "done">("idle");
+  const [isOfflineCache, setIsOfflineCache] = useState(false);
+  // Increments every minute to re-derive pet status without a network call
+  const [, setTick] = useState(0);
+  const calendarControllerRef = useRef<AbortController | null>(null);
 
-  // API URL from config
   const API_URL = config.API_URL;
 
   useEffect(() => {
-    checkAuthAndFetchData();
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    checkAuthAndFetchData(controller.signal);
+    return () => controller.abort();
   }, []);
 
   const hasPetType = (type?: string | null) => {
@@ -107,13 +146,10 @@ const Home = () => {
     return normalizedUserId;
   };
 
-  const checkAuthAndFetchData = async () => {
-    // Check if user is logged in (userId stored in localStorage) 
+  const checkAuthAndFetchData = async (signal: AbortSignal) => {
     const userId = getSessionUserId();
 
     if (!userId) {
-      // User not logged in - this shouldn't happen due to ProtectedRoute
-      // but handle gracefully just in case
       localStorage.removeItem("userId");
       setLoading(false);
       navigate("/user/login");
@@ -121,15 +157,13 @@ const Home = () => {
     }
 
     try {
-      // Fetch dashboard data (user, latest GRAPES, latest CogTri)
-      const response = await fetch(`${API_URL}/dashboard/${userId}`);
-      console.log("API response status:", response.status, response.statusText, response.url);
+      const response = await fetch(`${API_URL}/dashboard/${userId}`, { signal });
 
       if (!response.ok) {
         if (response.status === 404) {
-          //User not found - invalid userId
           localStorage.removeItem("userId");
-          alert("User not found. Please log in again.");
+          sessionStorage.removeItem("sessionVerified");
+          showToast("User not found. Please log in again.", "error");
           navigate("/user/login");
           return;
         }
@@ -142,6 +176,19 @@ const Home = () => {
         localStorage.setItem("userId", normalizedResponseUserId);
       }
 
+      // Persist dashboard snapshot for offline use
+      localStorage.setItem(
+        `fp_cache_${userId}`,
+        JSON.stringify({
+          user: data.user,
+          latestGrapes: data.latestGrapes,
+          latestCogTri: data.latestCogTri,
+          activityDates: data.activityDates,
+          cachedAt: new Date().toISOString(),
+        })
+      );
+
+      setIsOfflineCache(false);
       setUser(data.user);
       setRequiresPetSelection(
         typeof data.requiresPetSelection === "boolean"
@@ -150,17 +197,166 @@ const Home = () => {
       );
       setLatestGrapes(data.latestGrapes);
       setLatestCogTri(data.latestCogTri);
+
+      if (Array.isArray(data.activityDates)) {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+        const todayDate = today.getDate();
+
+        const days = new Set<number>(
+          data.activityDates
+            .map((d: string) => new Date(d))
+            .filter((d: Date) => d.getMonth() === currentMonth && d.getFullYear() === currentYear && d.getDate() <= todayDate)
+            .map((d: Date) => d.getDate())
+        );
+        setActiveDays(days);
+      }
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      alert("Failed to load data. Please try again.");
-      // Optionally redirect to login on error
-      // navigate("/user/login");
+      if (error instanceof DOMException && error.name === "AbortError") return;
+
+      // Try to load cached snapshot before showing an error
+      const cached = localStorage.getItem(`fp_cache_${userId}`);
+      if (cached) {
+        try {
+          const snap = JSON.parse(cached);
+          setUser(snap.user);
+          setRequiresPetSelection(!hasPetType(snap.user?.petStats?.type));
+          setLatestGrapes(snap.latestGrapes);
+          setLatestCogTri(snap.latestCogTri);
+          setIsOfflineCache(true);
+
+          if (Array.isArray(snap.activityDates)) {
+            const today = new Date();
+            const days = new Set<number>(
+              snap.activityDates
+                .map((d: string) => new Date(d))
+                .filter((d: Date) => d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear() && d.getDate() <= today.getDate())
+                .map((d: Date) => d.getDate())
+            );
+            setActiveDays(days);
+          }
+        } catch {
+          showToast("Failed to load data. Please try again.", "error");
+        }
+      } else {
+        showToast("Failed to load data. Please try again.", "error");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Calculate how many GRAPES activities are filled
+  const fetchCalendarDates = async (month: number, year: number) => {
+    calendarControllerRef.current?.abort();
+    const controller = new AbortController();
+    calendarControllerRef.current = controller;
+
+    const userId = getSessionUserId();
+    if (!userId) return;
+
+    setCalendarLoading(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/activity-dates/${userId}?month=${month}&year=${year}`,
+        { signal: controller.signal }
+      );
+      if (!response.ok) return;
+      const data = await response.json();
+
+      const today = new Date();
+      const isCurrentMonthView = month === today.getMonth() && year === today.getFullYear();
+
+      const days = new Set<number>(
+        (data.activityDates as string[])
+          .map((d) => new Date(d))
+          .filter((d) => {
+            if (d.getMonth() !== month || d.getFullYear() !== year) return false;
+            if (isCurrentMonthView && d.getDate() > today.getDate()) return false;
+            return true;
+          })
+          .map((d) => d.getDate())
+      );
+      setActiveDays(days);
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      console.error("Error fetching calendar dates:", err);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleFeed = async () => {
+    const userId = getSessionUserId();
+    if (!userId || feedAnim === "feeding") return;
+
+    setFeedAnim("feeding");
+    try {
+      const response = await fetch(`${API_URL}/users/${userId}/pet-feed`, {
+        method: "PATCH",
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        showToast(data.error || "Failed to feed pet", "error");
+        setFeedAnim("idle");
+        return;
+      }
+
+      if (data.alreadyFed) {
+        showToast("Already fed today!", "info");
+        setFeedAnim("idle");
+        return;
+      }
+
+      setUser(prev =>
+        prev ? { ...prev, petStats: { ...prev.petStats!, ...data.petStats } } : prev
+      );
+      setFeedAnim("done");
+
+      if (data.leveledUp) {
+        showToast(`Your pet leveled up to Lv. ${data.newLevel}!`, "success");
+      }
+
+      setTimeout(() => setFeedAnim("idle"), 1500);
+    } catch {
+      showToast("Failed to feed pet. Check your connection.", "error");
+      setFeedAnim("idle");
+    }
+  };
+
+  const isCurrentMonth = () => {
+    const today = new Date();
+    return viewMonth === today.getMonth() && viewYear === today.getFullYear();
+  };
+
+  const isThreeMonthsBack = () => {
+    const today = new Date();
+    const limit = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+    const viewing = new Date(viewYear, viewMonth, 1);
+    return viewing <= limit;
+  };
+
+  const handlePrevMonth = () => {
+    if (isThreeMonthsBack()) return;
+    const newMonth = viewMonth === 0 ? 11 : viewMonth - 1;
+    const newYear = viewMonth === 0 ? viewYear - 1 : viewYear;
+    setViewMonth(newMonth);
+    setViewYear(newYear);
+    setActiveDays(new Set());
+    fetchCalendarDates(newMonth, newYear);
+  };
+
+  const handleNextMonth = () => {
+    if (isCurrentMonth()) return;
+    const newMonth = viewMonth === 11 ? 0 : viewMonth + 1;
+    const newYear = viewMonth === 11 ? viewYear + 1 : viewYear;
+    setViewMonth(newMonth);
+    setViewYear(newYear);
+    setActiveDays(new Set());
+    fetchCalendarDates(newMonth, newYear);
+  };
+
   const calculateGrapesCount = () => {
     if (!latestGrapes) return 0;
 
@@ -175,29 +371,21 @@ const Home = () => {
     return count;
   };
 
-  // Get pet status message
+  // Derived each render — tick state ensures it updates every minute
+  const petStatus = getDerivedPetStatus(user?.petStats?.lastFed);
+
   const getPetMessage = () => {
     if (!hasPetType(user?.petStats?.type)) {
       return "Choose your pet to start your journey!";
     }
-
-    const status = user?.petStats?.status || "neutral";
-
-    if (status === "happy") {
-      return "Your pet is feeling great! Keep up the good work :)";
-    } else if (status === "sad") {
-      return "Your pet is sad. Complete more activities to cheer them up!";
-    } else {
-      return "Your pet is neutral. Keep working on your mental health!";
-    }
+    if (petStatus === "happy") return "Your pet is feeling great! Keep up the good work :)";
+    if (petStatus === "sad") return "Your pet is sad. Feed them and complete more activities!";
+    return "Your pet is neutral. Keep working on your mental health!";
   };
 
-  // Get pet status color
   const getPetStatusColor = () => {
-    const status = user?.petStats?.status || "neutral";
-
-    if (status === "happy") return "text-green-500";
-    if (status === "sad") return "text-red-500";
+    if (petStatus === "happy") return "text-green-500";
+    if (petStatus === "sad") return "text-red-500";
     return "text-gray-500";
   };
 
@@ -211,8 +399,21 @@ const Home = () => {
     const selectedType = getSelectedPetType();
     if (selectedType === "fish") return "Fish";
     if (selectedType === "seal") return "Seal";
-    return "Not selected";
+    return "No Pet Yet";
   };
+
+  const isFedToday = () => {
+    const lastFed = user?.petStats?.lastFed;
+    if (!lastFed) return false;
+    return isSameUTCDay(new Date(lastFed), new Date());
+  };
+
+  const petLevel = user?.petStats?.level ?? 1;
+  const petXP = user?.petStats?.experience ?? 0;
+  const isMaxLevel = petLevel >= MAX_LEVEL;
+  const xpInLevel = isMaxLevel ? 0 : petXP - LEVEL_THRESHOLDS[petLevel];
+  const xpForLevel = isMaxLevel ? 1 : LEVEL_THRESHOLDS[petLevel + 1] - LEVEL_THRESHOLDS[petLevel];
+  const xpPercent = isMaxLevel ? 100 : Math.min(100, (xpInLevel / xpForLevel) * 100);
 
   const renderPetCharacter = () => {
     const selectedType = getSelectedPetType();
@@ -553,22 +754,17 @@ const Home = () => {
     }
   };
 
-  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-dark text-xl font-semibold">Loading...</p>
-        </div>
+      <div className="min-h-dvh bg-neutral flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  // If no user data after loading, show error
   if (!user) {
     return (
-      <div className="min-h-screen bg-neutral flex items-center justify-center p-4">
+      <div className="min-h-dvh bg-neutral flex items-center justify-center p-4">
         <div className="text-center bg-white rounded-2xl shadow-lg p-8">
           <div className="text-4xl mb-4">⚠️</div>
           <p className="text-dark text-xl font-semibold mb-4">
@@ -586,9 +782,11 @@ const Home = () => {
   }
 
   const grapesCount = calculateGrapesCount();
+  const fedToday = isFedToday();
 
   return (
     <div className="bg-neutral p-4 flex flex-col gap-4 relative">
+      <Toast message={message} type={type} visible={visible} />
 
       {requiresPetSelection && (
         <div className="fixed inset-0 bg-dark/80 z-50 flex items-center justify-center p-6">
@@ -643,6 +841,11 @@ const Home = () => {
         <h2 className="text-dark text-2xl font-bold min-[420px]:text-3xl min-[420px]:font-semibold tracking-wider">
           Welcome Back, {user.username}!
         </h2>
+        {isOfflineCache && (
+          <p className="text-xs font-semibold text-gray-400 mt-0.5">
+            Showing cached data — connect to refresh
+          </p>
+        )}
       </div>
 
       {/* PET SECTION */}
@@ -656,24 +859,81 @@ const Home = () => {
           <div className="absolute bottom-0 left-0 right-0 h-20 bg-accent-3 rounded-bl-xl"></div>
 
           {renderPetCharacter()}
+
+          {/* Feed overlay — shows "Feeding..." then "Yum!" */}
+          {feedAnim !== "idle" && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-dark/40 rounded-bl-xl">
+              <p className="text-highlight font-bold text-lg">
+                {feedAnim === "feeding" ? "Feeding..." : "Yum!"}
+              </p>
+            </div>
+          )}
+
+          {/* Orange — tappable, fades when already fed */}
+          {hasPetType(user?.petStats?.type) && (
+            <button
+              onClick={handleFeed}
+              disabled={fedToday || feedAnim === "feeding"}
+              className={`absolute z-10 top-1 right-1 flex flex-col items-center gap-0.5 transition-opacity ${
+                fedToday ? "opacity-30 cursor-not-allowed" : "opacity-100 cursor-pointer active:scale-95"
+              }`}
+            >
+              <img
+                src="/src/assets/orange.png"
+                alt="Feed pet"
+                className="w-10 h-10"
+              />
+              <span className="text-[10px] font-bold text-dark leading-none">
+                {fedToday ? "Fed!" : "Feed"}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Right side (Pet Stats) */}
-        <div className="bg-accent-2 flex flex-col items-center justify-start py-4 px-4 w-2/5">
-          <h2 className="text-xl font-bold text-dark">{getSelectedPetName()} Stats</h2>
+        <div className="bg-accent-2 flex flex-col items-center justify-start py-3 px-3 w-2/5">
+          <h2 className="text-lg font-bold text-dark mb-1">{getSelectedPetName()}</h2>
 
-          {/* Status Indicator */}
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-md font-semibold text-dark">Status:</span>
-            <span className={`text-md font-bold ${getPetStatusColor()}`}>
-              {user.petStats?.status || "neutral"}
-            </span>
-          </div>
+          {hasPetType(user?.petStats?.type) ? (
+            <>
+              {/* Status */}
+              <div className="flex items-center gap-1 mb-1">
+                <span className="text-xs font-semibold text-dark">Status:</span>
+                <span className={`text-xs font-bold capitalize ${getPetStatusColor()}`}>
+                  {petStatus}
+                </span>
+              </div>
 
-          {/* Message */}
-          <p className="text-sm font-semibold text-center text-dark/80 leading-relaxed">
-            {getPetMessage()}
-          </p>
+              {/* XP bar */}
+              <div className="w-full mt-1">
+                {isMaxLevel ? (
+                  <p className="text-center text-xs font-bold text-accent-1">MAX</p>
+                ) : (
+                  <>
+                    <div className="flex justify-between text-[10px] text-dark/70 mb-1">
+                      <span>Lv. {petLevel}</span>
+                      <span>{xpInLevel} / {xpForLevel} XP</span>
+                    </div>
+                    <div className="w-full bg-gray-300 rounded-full h-1.5">
+                      <div
+                        className="bg-accent-1 h-1.5 rounded-full transition-all duration-500"
+                        style={{ width: `${xpPercent}%` }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Message */}
+              <p className="text-[10px] font-semibold text-center text-dark/80 leading-tight mt-2">
+                {getPetMessage()}
+              </p>
+            </>
+          ) : (
+            <p className="text-xs font-semibold text-center text-dark/70 leading-relaxed mt-1">
+              {getPetMessage()}
+            </p>
+          )}
         </div>
       </div>
 
@@ -839,22 +1099,17 @@ const Home = () => {
         </div>
       </div>
 
-      {/* Calendar and Streak Section --> WIP, need to figure out the backend for ts :/ */}
+      {/* Calendar and Streak Section */}
       <div className="flex gap-0 relative h-72">
-
-        {/* Coming Soon Veil --> remove once streak feature is integrated!!! */}
-        <div className="absolute inset-0 bg-dark/60 rounded-2xl flex items-center justify-center z-10 pointer-events-none select-none">
-          <div className="text-center">
-            <p className="text-white text-4xl font-bold montserrat-alternates tracking-wider">
-              Coming Soon!
-            </p>
-          </div>
-        </div>
 
         {/* Streak */}
         <div className="bg-accent-2 px-5 py-4 rounded-l-2xl w-[35%] relative z-5">
           <div className="font-bold text-2xl text-accent-1 leading-tight mb-2">
-            You're on a roll!
+            {user.streak === 0
+              ? "Start today!"
+              : user.streak === 1
+              ? "Keep going!"
+              : "On a roll!"}
           </div>
           {/* Divider Line */}
           <div className="w-[100%] h-[2px] my-3 bg-accent-1"></div>
@@ -871,12 +1126,28 @@ const Home = () => {
 
         {/* Calendar */}
         <div className="bg-highlight rounded-r-2xl flex-1 -ml-4 pl-6 relative shadow-sm">
-          <h2 className="text-xl px-2 py-3 text-highlight bg-primary-light rounded-tr-2xl font-bold mb-3 -ml-6 pl-8">
-            {new Date().toLocaleString("default", {
-              month: "long",
-              year: "numeric",
-            })}
-          </h2>
+          <div className="flex items-center justify-between bg-primary-light rounded-tr-2xl px-2 py-3 mb-3 -ml-6 pl-8 pr-3">
+            <button
+              onClick={handlePrevMonth}
+              disabled={isThreeMonthsBack()}
+              className={`text-lg px-1 font-bold transition-opacity ${isThreeMonthsBack() ? "opacity-20 cursor-not-allowed" : "text-highlight active:opacity-60"}`}
+            >
+              ◀
+            </button>
+            <h2 className="text-sm font-bold text-highlight text-center flex-1">
+              {new Date(viewYear, viewMonth).toLocaleString("default", {
+                month: "long",
+                year: "numeric",
+              })}
+            </h2>
+            <button
+              onClick={handleNextMonth}
+              disabled={isCurrentMonth()}
+              className={`text-lg px-1 font-bold transition-opacity ${isCurrentMonth() ? "opacity-20 cursor-not-allowed" : "text-highlight active:opacity-60"}`}
+            >
+              ▶
+            </button>
+          </div>
           {/* Day headers */}
           <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-gray-500 mb-2 px-2">
             <div>S</div>
@@ -888,29 +1159,39 @@ const Home = () => {
             <div>S</div>
           </div>
           {/* Calendar days */}
-          <div className="grid grid-cols-7 gap-1 text-center text-sm font-bold px-2">
-            {/* Empty cells for days before month starts */}
-            {[1, 2, 3].map((day) => (
-              <div key={`empty-${day}`} className="p-2"></div>
-            ))}
-            {/* October days (starts on Friday in the PDF) */}
-            {Array.from({ length: 31 }).map((_, i) => {
-              const day = i + 1;
-              // Days 1-25 and 31 are highlighted in teal in the PDF
-              const isHighlighted = day <= 25 || day === 31;
-              return (
-                <div
-                  key={day}
-                  className={`p-2 rounded ${isHighlighted
-                    ? "bg-primary-light text-highlight"
-                    : "bg-gray-200 text-gray-400"
-                    }`}
-                >
-                  {day}
-                </div>
-              );
-            })}
-          </div>
+          {(() => {
+            const today = new Date();
+            const firstDayOfMonth = new Date(viewYear, viewMonth, 1).getDay();
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const showingCurrentMonth = viewMonth === today.getMonth() && viewYear === today.getFullYear();
+            return calendarLoading ? (
+              <div className="text-center text-xs text-gray-400 py-4">Loading...</div>
+            ) : (
+              <div className="grid grid-cols-7 gap-1 text-center text-sm font-bold px-2">
+                {Array.from({ length: firstDayOfMonth }).map((_, i) => (
+                  <div key={`empty-${i}`} className="p-2"></div>
+                ))}
+                {Array.from({ length: daysInMonth }).map((_, i) => {
+                  const day = i + 1;
+                  const isToday = showingCurrentMonth && day === today.getDate();
+                  const isActive = activeDays.has(day);
+                  return (
+                    <div
+                      key={day}
+                      className={`p-2 rounded ${isActive
+                        ? "bg-primary-light text-highlight"
+                        : isToday
+                        ? "bg-accent-1/30 text-dark"
+                        : "bg-gray-200 text-gray-400"
+                      }`}
+                    >
+                      {day}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
       </div>

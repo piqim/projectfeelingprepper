@@ -91,17 +91,9 @@ const Login = () => {
 
       if (!response.ok) {
         setError(data.error || "Login failed");
-        // debugging logs
-        console.error("Login error:", data);
-        console.log("Response status:", response.status);
-        console.log("Form email: ", formData.email);
-        console.log("Form password: ", formData.password);
         setLoading(false);
         return;
       }
-
-      // Login successful!
-      console.log("Login successful:", data);
 
       // Store userId in localStorage
       const normalizedUserId = extractMongoId(data?.user?._id);
@@ -124,7 +116,7 @@ const Login = () => {
   };
 
   return (
-    <div className="h-[930px] bg-gradient-to-br from-primary-base to-primary-light flex items-center justify-center p-8"> 
+    <div className="min-h-dvh bg-gradient-to-br from-primary-base to-primary-light flex items-center justify-center p-8">
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center">

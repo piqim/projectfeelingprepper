@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import config from "../config";
+import Toast from "./Toast";
+import { useToast } from "../hooks/useToast";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -16,6 +18,8 @@ const Register = () => {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const { message, type, visible, showToast } = useToast();
 
   const API_URL = config.API_URL;
 
@@ -122,10 +126,6 @@ const Register = () => {
         return;
       }
 
-      // Registration successful!
-      console.log("Registration successful:", data);
-
-      // Store userId in localStorage
       const normalizedUserId = extractMongoId(data?.insertedId);
 
       if (!normalizedUserId) {
@@ -135,21 +135,19 @@ const Register = () => {
       }
 
       localStorage.setItem("userId", normalizedUserId);
+      showToast("Account created successfully! Welcome to FeelingPrepper!", "success");
 
-      // Show success message
-      alert("Account created successfully! Welcome to FeelingPrepper 🎉");
-
-      // Redirect to home page
-      navigate("/");
-    } catch (error) {
-      console.error("Registration error:", error);
+      // Brief delay so user sees the toast before redirect
+      setTimeout(() => navigate("/"), 1500);
+    } catch {
       setError("An error occurred. Please try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="h-min-[930px] bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8">
+    <div className="min-h-dvh bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8">
+      <Toast message={message} type={type} visible={visible} />
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center mb-8">

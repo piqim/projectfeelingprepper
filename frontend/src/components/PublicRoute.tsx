@@ -22,9 +22,9 @@ const PublicRoute = ({ children }: PublicRouteProps) => {
   if (isChecking) {
     return (
       <div className="min-h-screen bg-neutral flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-dark text-xl font-semibold">Loading...</p>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
+          <p className="text-dark text-sm">Loading...</p>
         </div>
       </div>
     );

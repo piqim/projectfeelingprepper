@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import config from "../../config";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
 
 interface GrapesEntry {
   _id?: string;
@@ -36,6 +38,9 @@ const Grapes = () => {
   // History data from MongoDB
   const [historyEntries, setHistoryEntries] = useState<GrapesEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { message, type, visible, showToast } = useToast();
 
   // Get userId from localStorage
   const getUserId = () => {
@@ -58,18 +63,14 @@ const Grapes = () => {
     setLoadingHistory(true);
     try {
       const response = await fetch(`${API_URL}/grapes/user/${userId}`);
-
       if (response.ok) {
         const data = await response.json();
         setHistoryEntries(data);
-        console.log("Fetched GRAPES history:", data);
       } else {
-        console.error("Failed to fetch history:", response.status);
-        alert("Failed to load history. Please try again.");
+        showToast("Failed to load history. Please try again.", "error");
       }
-    } catch (error) {
-      console.error("Error fetching history:", error);
-      alert("Error loading history. Please check your connection.");
+    } catch {
+      showToast("Error loading history. Please check your connection.", "error");
     } finally {
       setLoadingHistory(false);
     }
@@ -87,7 +88,7 @@ const Grapes = () => {
     // Check if at least one field is filled
     const hasContent = Object.values(entries).some((val) => val.trim() !== "");
     if (!hasContent) {
-      alert("Please fill in at least one activity before saving.");
+      showToast("Please fill in at least one activity before saving.", "error");
       return;
     }
 
@@ -102,12 +103,13 @@ const Grapes = () => {
   const handleConfirmSave = async (completed: boolean) => {
     const userId = getUserId();
     if (!userId) {
-      alert("You must be logged in to save entries.");
+      showToast("You must be logged in to save entries.", "error");
       setShowSaveModal(false);
       return;
     }
 
-    // Prepare data for MongoDB
+    setIsSaving(true);
+
     const dataToSave = {
       userId,
       date: new Date().toISOString(),
@@ -120,8 +122,6 @@ const Grapes = () => {
       completed,
     };
 
-    console.log("Saving to MongoDB:", dataToSave);
-
     try {
       const response = await fetch(`${API_URL}/grapes`, {
         method: "POST",
@@ -130,32 +130,25 @@ const Grapes = () => {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("Saved successfully:", result);
-
-        // Clear form after save
-        setEntries({
-          gentle: "",
-          recreation: "",
-          accomplishment: "",
-          pleasure: "",
-          exercise: "",
-          social: "",
-        });
-
-        // Refresh history to show new entry
+        const data = await response.json();
+        setEntries({ gentle: "", recreation: "", accomplishment: "", pleasure: "", exercise: "", social: "" });
         await fetchHistory();
-
         setShowSaveModal(false);
-        alert("Entry saved successfully!");
+        showToast("Entry saved successfully!", "success");
+        if (data.leveledUp) {
+          showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
+        }
+        if (data.streakUpdated === false) {
+          showToast("Entry saved, but your streak couldn't be updated right now.", "info");
+        }
       } else {
         const error = await response.json();
-        console.error("Save failed:", error);
-        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+        showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
       }
-    } catch (error) {
-      console.error("Error saving:", error);
-      alert("Error saving entry. Please check your connection.");
+    } catch {
+      showToast("Error saving entry. Please check your connection.", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -178,17 +171,17 @@ const Grapes = () => {
   };
 
   return (
-    <div className=" bg-highlight pb-10">
+    <div className="bg-neutral pb-10">
+      <Toast message={message} type={type} visible={visible} />
       {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <h1 className="text-dark text-2xl min-[420px]:text-3xl font-bold text-center montserrat-alternates">
-          GRAPES (Daily Tracker)
+      <div className="bg-primary-light p-4 text-center">
+        <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
+          GRAPES Daily Tracker
         </h1>
-        <div className="w-full h-1 bg-dark mt-2"></div>
       </div>
 
       {/* Grape Vine Container */}
-      <div className="relative px-2 mt-2 rounded-2xl bg-neutral" style={{ minHeight: "700px" }}>
+      <div className="relative px-2 mt-2 rounded-2xl bg-neutral aspect-[4/7] w-full">
         {/* SVG Tree Structure */}
         <svg
           className="absolute inset-0 w-full h-full pointer-events-none"
@@ -241,14 +234,9 @@ const Grapes = () => {
         {/* Grape Circles with Inputs */}
         {/* G - Gentle (Top Left) */}
         <div
-          className="min-[420px]:left-[9%] left-[5%]
+          className="min-[420px]:left-[9%] left-[5%] w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]
           absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "1%",
-            zIndex: 10,
-          }}
+          style={{ top: "1%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">G</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -265,14 +253,9 @@ const Grapes = () => {
 
         {/* R - Recreation (Top Right) */}
         <div
-          className="min-[420px]:right-[9%] right-[4%]
+          className="min-[420px]:right-[9%] right-[4%] w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]
           absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "7.5%",
-            zIndex: 10,
-          }}
+          style={{ top: "7.5%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">R</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -289,14 +272,9 @@ const Grapes = () => {
 
         {/* A - Accomplishment (Middle Left) */}
         <div
-          className="min-[420px]:left-[10%] left-[4.5%]
+          className="min-[420px]:left-[10%] left-[4.5%] w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]
           absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "27.5%",
-            zIndex: 10,
-          }}
+          style={{ top: "27.5%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">A</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -315,14 +293,9 @@ const Grapes = () => {
 
         {/* P - Pleasure (Middle Right) */}
         <div
-          className="min-[420px]:right-[9%] right-[4%]
+          className="min-[420px]:right-[9%] right-[4%] w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]
           absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "32.5%",
-            zIndex: 10,
-          }}
+          style={{ top: "32.5%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">P</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -339,14 +312,9 @@ const Grapes = () => {
 
         {/* E - Exercise (Bottom Left) */}
         <div
-          className="min-[410px]:left-[13.5%] left-[4.5%]
+          className="min-[410px]:left-[13.5%] left-[4.5%] w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]
           absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "52.5%",
-            zIndex: 10,
-          }}
+          style={{ top: "52.5%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">E</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -363,14 +331,8 @@ const Grapes = () => {
 
         {/* S - Social (Bottom Right) */}
         <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            right: "2.5%",
-            top: "60%",
-            zIndex: 10,
-          }}
+          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4 w-[44vw] h-[44vw] max-w-[170px] max-h-[170px]"
+          style={{ right: "2.5%", top: "60%", zIndex: 10 }}
         >
           <div className="text-4xl font-bold text-dark mb-1">S</div>
           <div className="text-sm text-dark font-bold text-center mb-3">
@@ -425,15 +387,16 @@ const Grapes = () => {
                     onClick={() => {
                       setShowSaveModal(false);
                     }}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(true)}
-                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-light text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-primary-base transition-colors disabled:opacity-60"
                   >
-                    Done ✓
+                    {isSaving ? "Saving..." : "Done ✓"}
                   </button>
                 </div>
               </>
@@ -451,15 +414,16 @@ const Grapes = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-gray-300 transition-colors"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(false)}
-                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-yellow-500 text-dark text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-60"
                   >
-                    Save Partial
+                    {isSaving ? "Saving..." : "Save Partial"}
                   </button>
                 </div>
               </>
