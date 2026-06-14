@@ -111,6 +111,7 @@ const Register = () => {
       }
 
       localStorage.setItem("userId", normalizedUserId);
+      localStorage.setItem("fp_token", data.token);
       showToast("Account created successfully! Welcome to FeelingPrepper!", "success");
 
       // Brief delay so user sees the toast before redirect

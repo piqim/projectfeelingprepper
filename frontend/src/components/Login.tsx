@@ -79,6 +79,7 @@ const Login = () => {
       }
 
       localStorage.setItem("userId", normalizedUserId);
+      localStorage.setItem("fp_token", data.token);
 
       // Redirect to home page
       navigate("/");

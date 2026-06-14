@@ -5,6 +5,7 @@ import Toast from "../Toast";
 import { useToast } from "../../hooks/useToast";
 import { useTheme, type Theme } from "../../hooks/useTheme";
 import { getStoredUserId } from "../../utils/userId";
+import { authHeaders, clearAuthStorage } from "../../utils/auth";
 
 interface User {
   _id: string;
@@ -36,7 +37,6 @@ const Settings = () => {
   // Modal states
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isExporting, setIsExporting] = useState(false);
@@ -58,7 +58,7 @@ const Settings = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/users/${userId}`);
+      const response = await fetch(`${API_URL}/users/${userId}`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setUser(data);
@@ -114,12 +114,6 @@ const Settings = () => {
       return;
     }
 
-    // Always require current password to make profile changes
-    if (!formData.password) {
-      setError("Please enter your current password to save changes");
-      return;
-    }
-
     // If changing password
     if (formData.newPassword) {
       if (formData.newPassword.length < 6) {
@@ -137,7 +131,7 @@ const Settings = () => {
       if (formData.newPassword) {
         const pwResponse = await fetch(`${API_URL}/users/${userId}/change-password`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({
             currentPassword: formData.password,
             newPassword: formData.newPassword,
@@ -154,11 +148,10 @@ const Settings = () => {
       // Update username / email via general PATCH
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
-          password: formData.password,
         }),
       });
 
@@ -185,8 +178,8 @@ const Settings = () => {
     try {
       // Fetch all user data
       const [grapesResponse, cogtriResponse] = await Promise.all([
-        fetch(`${API_URL}/grapes/user/${userId}`),
-        fetch(`${API_URL}/cogtri/user/${userId}`),
+        fetch(`${API_URL}/grapes/user/${userId}`, { headers: authHeaders() }),
+        fetch(`${API_URL}/cogtri/user/${userId}`, { headers: authHeaders() }),
       ]);
 
       const grapesData = await grapesResponse.json();
@@ -238,10 +231,6 @@ const Settings = () => {
       setError('Please type "DELETE" to confirm');
       return;
     }
-    if (!deletePassword) {
-      setError("Please enter your password to confirm deletion");
-      return;
-    }
 
     setIsDeleting(true);
     const userId = getStoredUserId();
@@ -250,13 +239,11 @@ const Settings = () => {
     try {
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: deletePassword }),
+        headers: authHeaders(),
       });
 
       if (response.ok) {
-        localStorage.removeItem("userId");
-        sessionStorage.removeItem("sessionVerified");
+        clearAuthStorage();
         showToast("Your account and all data have been deleted.", "info");
         setTimeout(() => navigate("/user/login"), 1500);
       } else {
@@ -272,8 +259,7 @@ const Settings = () => {
 
   // Logout
   const handleLogout = () => {
-    localStorage.removeItem("userId");
-    sessionStorage.removeItem("sessionVerified");
+    clearAuthStorage();
     navigate("/user/login");
   };
 
@@ -582,25 +568,9 @@ const Settings = () => {
                     />
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-semibold text-ink mb-2">
-                      Enter your password
-                    </label>
-                    <input
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => {
-                        setDeletePassword(e.target.value);
-                        setError("");
-                      }}
-                      placeholder="Your current password"
-                      className="w-full border-2 border-red-300 bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
-                    />
-                  </div>
-
                   <button
                     onClick={handleDeleteAccount}
-                    disabled={isDeleting || deleteConfirmText !== "DELETE" || !deletePassword}
+                    disabled={isDeleting || deleteConfirmText !== "DELETE"}
                     className="w-full bg-red-500 text-white font-bold py-3 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isDeleting ? "Deleting..." : "🗑️ Delete Account"}

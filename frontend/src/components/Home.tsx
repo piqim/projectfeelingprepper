@@ -6,6 +6,7 @@ import { useToast } from "../hooks/useToast";
 import { fireConfetti } from "../hooks/useConfetti";
 import { formatFriendlyDateTime } from "../utils/date";
 import { extractMongoId, getStoredUserId } from "../utils/userId";
+import { authHeaders, clearAuthStorage } from "../utils/auth";
 import { LEVEL_THRESHOLDS, MAX_LEVEL, isSameUTCDay, getDerivedPetStatus } from "../utils/pet";
 import PetCharacter from "./pet/PetCharacter";
 import PetPreview from "./pet/PetPreview";
@@ -123,12 +124,11 @@ const Home = () => {
     }
 
     try {
-      const response = await fetch(`${API_URL}/dashboard/${userId}`, { signal });
+      const response = await fetch(`${API_URL}/dashboard/${userId}`, { signal, headers: authHeaders() });
 
       if (!response.ok) {
         if (response.status === 404) {
-          localStorage.removeItem("userId");
-          sessionStorage.removeItem("sessionVerified");
+          clearAuthStorage();
           showToast("User not found. Please log in again.", "error");
           setTimeout(() => navigate("/user/login"), 1500);
           return;
@@ -240,7 +240,7 @@ const Home = () => {
     try {
       const response = await fetch(
         `${API_URL}/activity-dates/${userId}?month=${month}&year=${year}`,
-        { signal: controller.signal }
+        { signal: controller.signal, headers: authHeaders() }
       );
       if (!response.ok) return;
       const data = await response.json();
@@ -275,6 +275,7 @@ const Home = () => {
     try {
       const response = await fetch(`${API_URL}/users/${userId}/pet-feed`, {
         method: "PATCH",
+        headers: authHeaders(),
       });
       const data = await response.json();
 
@@ -414,9 +415,7 @@ const Home = () => {
     try {
       const response = await fetch(`${API_URL}/users/${resolvedUserId}/pet-selection`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: authHeaders(),
         body: JSON.stringify({ type }),
       });
 

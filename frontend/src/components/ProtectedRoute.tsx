@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
 import config from "../config";
+import { authHeaders, clearAuthStorage } from "../utils/auth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -13,8 +14,10 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   useEffect(() => {
     const checkAuth = async () => {
       const userId = localStorage.getItem("userId");
+      const token = localStorage.getItem("fp_token");
 
-      if (!userId) {
+      if (!userId || !token) {
+        clearAuthStorage();
         setIsAuthenticated(false);
         setIsChecking(false);
         return;
@@ -29,11 +32,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       }
 
       try {
-        const response = await fetch(`${config.API_URL}/users/${userId}`);
-        if (response.status === 404 || response.status === 400) {
-          // Account no longer exists or ID is malformed — force logout
-          localStorage.removeItem("userId");
-          sessionStorage.removeItem("sessionVerified");
+        const response = await fetch(`${config.API_URL}/users/${userId}`, { headers: authHeaders() });
+        if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 400) {
+          clearAuthStorage();
           setIsAuthenticated(false);
         } else {
           // Mark as verified for the rest of this browser session

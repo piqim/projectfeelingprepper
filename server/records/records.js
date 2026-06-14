@@ -3,6 +3,7 @@ import db from "../db/connection.js";
 import { ObjectId } from "mongodb";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
 const router = express.Router();
@@ -77,7 +78,17 @@ const awardXP = async (userId, amount) => {
   return { newExperience: newXP, newLevel, leveledUp };
 };
 
-// Returns true if two dates fall on the same UTC calendar day
+const authenticateToken = (req, res, next) => {
+  const auth = req.headers["authorization"];
+  const token = auth && auth.split(" ")[1];
+  if (!token) return res.status(401).json({ error: "Unauthorized" });
+  jwt.verify(token, process.env.JWT_SECRET, (err, payload) => {
+    if (err) return res.status(403).json({ error: "Invalid token" });
+    req.userId = payload.userId;
+    next();
+  });
+};
+
 // Rejects requests to admin-only routes that lack the correct X-Admin-Key header
 const requireAdminKey = (req, res, next) => {
   const key = req.headers["x-admin-key"];
@@ -148,8 +159,15 @@ router.post("/auth/login", async (req, res) => {
     // Login successful - return user without password
     const { password: _, ...userWithoutPassword } = user;
 
+    const token = jwt.sign(
+      { userId: user._id.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
     res.status(200).json({
       message: "Login successful",
+      token,
       user: userWithoutPassword,
       requiresPetSelection: !hasSelectedPet(user.petStats),
     });
@@ -178,15 +196,12 @@ router.get("/users", requireAdminKey, async (req, res) => {
 });
 
 // Get single user by ID
-router.get("/users/:id", async (req, res) => {
+router.get("/users/:id", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
     const collection = db.collection("users");
-    const user = await collection.findOne({ _id: new ObjectId(req.params.id) });
+    const user = await collection.findOne({ _id: new ObjectId(req.userId) });
     if (!user) return res.status(404).json({ error: "User not found" });
-    
+
     // Don't send password to client
     const { password, ...userWithoutPassword } = user;
     res.status(200).json({
@@ -200,14 +215,10 @@ router.get("/users/:id", async (req, res) => {
 });
 
 // Get user pet selection status
-router.get("/users/:id/pet-selection", async (req, res) => {
+router.get("/users/:id/pet-selection", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
     const user = await db.collection("users").findOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       { projection: { petStats: 1 } }
     );
 
@@ -228,12 +239,8 @@ router.get("/users/:id/pet-selection", async (req, res) => {
 });
 
 // Choose or update user pet type
-router.patch("/users/:id/pet-selection", async (req, res) => {
+router.patch("/users/:id/pet-selection", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
     if (typeof req.body.type !== "string" || req.body.type.trim().length === 0) {
       return res.status(400).json({ error: "type is required" });
     }
@@ -246,7 +253,7 @@ router.patch("/users/:id/pet-selection", async (req, res) => {
     }
 
     const updateResult = await db.collection("users").updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       {
         $set: {
           "petStats.type": petType,
@@ -260,7 +267,7 @@ router.patch("/users/:id/pet-selection", async (req, res) => {
     }
 
     const updatedUser = await db.collection("users").findOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       { projection: { password: 0 } }
     );
 
@@ -318,9 +325,17 @@ router.post("/users", async (req, res) => {
     }
 
     const result = await collection.insertOne(newUser);
-    res.status(201).json({ 
+
+    const token = jwt.sign(
+      { userId: result.insertedId.toString() },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.status(201).json({
       insertedId: result.insertedId,
-      message: "User created successfully" 
+      token,
+      message: "User created successfully",
     });
   } catch (err) {
     console.error("Error adding user:", err);
@@ -328,26 +343,9 @@ router.post("/users", async (req, res) => {
   }
 });
 
-// Update user by ID — requires current password to verify ownership
-router.patch("/users/:id", async (req, res) => {
+// Update user by ID
+router.patch("/users/:id", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
-    const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ error: "Current password is required" });
-    }
-
-    const user = await db.collection("users").findOne({ _id: new ObjectId(req.params.id) });
-    if (!user) return res.status(404).json({ error: "User not found" });
-
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return res.status(401).json({ error: "Incorrect password" });
-    }
-
     const updates = { $set: {} };
     const allowedFields = ["username", "email", "preferences"];
 
@@ -361,10 +359,14 @@ router.patch("/users/:id", async (req, res) => {
       return res.status(400).json({ error: "No valid fields to update" });
     }
 
-    await db.collection("users").updateOne(
-      { _id: new ObjectId(req.params.id) },
+    const result = await db.collection("users").updateOne(
+      { _id: new ObjectId(req.userId) },
       updates
     );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     res.status(200).json({ message: "User updated successfully" });
   } catch (err) {
@@ -374,12 +376,8 @@ router.patch("/users/:id", async (req, res) => {
 });
 
 // Change password — verifies current password before hashing and storing the new one
-router.post("/users/:id/change-password", async (req, res) => {
+router.post("/users/:id/change-password", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -390,7 +388,7 @@ router.post("/users/:id/change-password", async (req, res) => {
       return res.status(400).json({ error: "New password must be at least 6 characters" });
     }
 
-    const user = await db.collection("users").findOne({ _id: new ObjectId(req.params.id) });
+    const user = await db.collection("users").findOne({ _id: new ObjectId(req.userId) });
     if (!user) return res.status(404).json({ error: "User not found" });
 
     const isValid = await bcrypt.compare(currentPassword, user.password);
@@ -402,7 +400,7 @@ router.post("/users/:id/change-password", async (req, res) => {
     const hashedNew = await bcrypt.hash(newPassword, saltRounds);
 
     await db.collection("users").updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       { $set: { password: hashedNew } }
     );
 
@@ -413,26 +411,12 @@ router.post("/users/:id/change-password", async (req, res) => {
   }
 });
 
-// Delete user by ID — requires current password to verify ownership
-router.delete("/users/:id", async (req, res) => {
+// Delete user by ID — JWT ownership verified via token
+router.delete("/users/:id", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
-    const { password } = req.body;
-    if (!password) {
-      return res.status(400).json({ error: "Password is required to delete account" });
-    }
-
-    const userId = req.params.id;
+    const userId = req.userId;
     const user = await db.collection("users").findOne({ _id: new ObjectId(userId) });
     if (!user) return res.status(404).json({ error: "User not found" });
-
-    const isValid = await bcrypt.compare(password, user.password);
-    if (!isValid) {
-      return res.status(401).json({ error: "Incorrect password" });
-    }
 
     // Delete user and all their entries
     await Promise.all([
@@ -469,9 +453,9 @@ router.get("/grapes", requireAdminKey, async (req, res) => {
 });
 
 // Get all GRAPES entries for a user
-router.get("/grapes/user/:userId", async (req, res) => {
+router.get("/grapes/user/:userId", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const results = await db.collection("grapes-entries")
       .find({ userId })
       .sort({ date: -1 }) // Most recent first
@@ -484,9 +468,9 @@ router.get("/grapes/user/:userId", async (req, res) => {
 });
 
 // Get latest GRAPES entry for a user
-router.get("/grapes/user/:userId/latest", async (req, res) => {
+router.get("/grapes/user/:userId/latest", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const entry = await db.collection("grapes-entries")
       .findOne({ userId }, { sort: { date: -1 } });
     
@@ -501,9 +485,9 @@ router.get("/grapes/user/:userId/latest", async (req, res) => {
 });
 
 // Get GRAPES entries by date range
-router.get("/grapes/user/:userId/range", async (req, res) => {
+router.get("/grapes/user/:userId/range", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
@@ -529,14 +513,14 @@ router.get("/grapes/user/:userId/range", async (req, res) => {
 });
 
 // Get single GRAPES entry by ID
-router.get("/grapes/:id", async (req, res) => {
+router.get("/grapes/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
     const entry = await db.collection("grapes-entries")
-      .findOne({ _id: new ObjectId(req.params.id) });
-    
+      .findOne({ _id: new ObjectId(req.params.id), userId: req.userId });
+
     if (!entry) return res.status(404).json({ error: "Entry not found" });
     res.status(200).json(entry);
   } catch (err) {
@@ -546,14 +530,10 @@ router.get("/grapes/:id", async (req, res) => {
 });
 
 // Create new GRAPES entry
-router.post("/grapes", async (req, res) => {
+router.post("/grapes", authenticateToken, async (req, res) => {
   try {
-    const { userId, date, gentle, recreation, accomplishment, pleasure, exercise, social, completed } = req.body;
-
-    // Validation
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
+    const userId = req.userId;
+    const { date, gentle, recreation, accomplishment, pleasure, exercise, social, completed } = req.body;
 
     // Check for an existing entry today (UTC day) — upsert instead of duplicate
     const now = new Date();
@@ -644,7 +624,7 @@ router.post("/grapes", async (req, res) => {
 });
 
 // Update GRAPES entry by ID
-router.patch("/grapes/:id", async (req, res) => {
+router.patch("/grapes/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
@@ -652,7 +632,7 @@ router.patch("/grapes/:id", async (req, res) => {
 
     const updates = { $set: {} };
     const allowedFields = ["date", "gentle", "recreation", "accomplishment", "pleasure", "exercise", "social", "completed"];
-    
+
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updates.$set[field] = field === "date" ? new Date(req.body[field]) : req.body[field];
@@ -664,7 +644,7 @@ router.patch("/grapes/:id", async (req, res) => {
     }
 
     const result = await db.collection("grapes-entries").updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.params.id), userId: req.userId },
       updates
     );
 
@@ -683,13 +663,13 @@ router.patch("/grapes/:id", async (req, res) => {
 });
 
 // Delete GRAPES entry by ID
-router.delete("/grapes/:id", async (req, res) => {
+router.delete("/grapes/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
     const result = await db.collection("grapes-entries")
-      .deleteOne({ _id: new ObjectId(req.params.id) });
+      .deleteOne({ _id: new ObjectId(req.params.id), userId: req.userId });
     
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: "Entry not found" });
@@ -722,9 +702,9 @@ router.get("/cogtri", requireAdminKey, async (req, res) => {
 });
 
 // Get all CogTri entries for a user
-router.get("/cogtri/user/:userId", async (req, res) => {
+router.get("/cogtri/user/:userId", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const results = await db.collection("cogtri-entries")
       .find({ userId })
       .sort({ date: -1 }) // Most recent first
@@ -737,9 +717,9 @@ router.get("/cogtri/user/:userId", async (req, res) => {
 });
 
 // Get latest CogTri entry for a user
-router.get("/cogtri/user/:userId/latest", async (req, res) => {
+router.get("/cogtri/user/:userId/latest", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const entry = await db.collection("cogtri-entries")
       .findOne({ userId }, { sort: { date: -1 } });
     
@@ -754,9 +734,9 @@ router.get("/cogtri/user/:userId/latest", async (req, res) => {
 });
 
 // Get CogTri entries by date range
-router.get("/cogtri/user/:userId/range", async (req, res) => {
+router.get("/cogtri/user/:userId/range", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
@@ -782,14 +762,14 @@ router.get("/cogtri/user/:userId/range", async (req, res) => {
 });
 
 // Get single CogTri entry by ID
-router.get("/cogtri/:id", async (req, res) => {
+router.get("/cogtri/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
     const entry = await db.collection("cogtri-entries")
-      .findOne({ _id: new ObjectId(req.params.id) });
-    
+      .findOne({ _id: new ObjectId(req.params.id), userId: req.userId });
+
     if (!entry) return res.status(404).json({ error: "Entry not found" });
     res.status(200).json(entry);
   } catch (err) {
@@ -799,14 +779,10 @@ router.get("/cogtri/:id", async (req, res) => {
 });
 
 // Create new CogTri entry
-router.post("/cogtri", async (req, res) => {
+router.post("/cogtri", authenticateToken, async (req, res) => {
   try {
-    const { userId, date, situation, thoughts, feelings, behavior, complete } = req.body;
-
-    // Validation
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
+    const userId = req.userId;
+    const { date, situation, thoughts, feelings, behavior, complete } = req.body;
 
     const newEntry = {
       userId,
@@ -864,7 +840,7 @@ router.post("/cogtri", async (req, res) => {
 });
 
 // Update CogTri entry by ID
-router.patch("/cogtri/:id", async (req, res) => {
+router.patch("/cogtri/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
@@ -884,7 +860,7 @@ router.patch("/cogtri/:id", async (req, res) => {
     }
 
     const result = await db.collection("cogtri-entries").updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.params.id), userId: req.userId },
       updates
     );
 
@@ -903,13 +879,13 @@ router.patch("/cogtri/:id", async (req, res) => {
 });
 
 // Delete CogTri entry by ID
-router.delete("/cogtri/:id", async (req, res) => {
+router.delete("/cogtri/:id", authenticateToken, async (req, res) => {
   try {
     if (!ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
     const result = await db.collection("cogtri-entries")
-      .deleteOne({ _id: new ObjectId(req.params.id) });
+      .deleteOne({ _id: new ObjectId(req.params.id), userId: req.userId });
     
     if (result.deletedCount === 0) {
       return res.status(404).json({ error: "Entry not found" });
@@ -928,13 +904,9 @@ router.delete("/cogtri/:id", async (req, res) => {
  */
 
 // Get user dashboard data (for home page)
-router.get("/dashboard/:userId", async (req, res) => {
+router.get("/dashboard/:userId", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
-
-    if (!ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
+    const userId = req.userId;
 
     // Query current month with a 1-day buffer on each side to handle timezone edge cases
     // (e.g. a user in UTC+8 posting at 11pm local time gets stored as next UTC day)
@@ -1002,14 +974,10 @@ router.get("/dashboard/:userId", async (req, res) => {
 });
 
 // Feed pet
-router.patch("/users/:id/pet-feed", async (req, res) => {
+router.patch("/users/:id/pet-feed", authenticateToken, async (req, res) => {
   try {
-    if (!ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-
     const user = await db.collection("users").findOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       { projection: { petStats: 1 } }
     );
 
@@ -1029,7 +997,7 @@ router.patch("/users/:id/pet-feed", async (req, res) => {
     }
 
     await db.collection("users").updateOne(
-      { _id: new ObjectId(req.params.id) },
+      { _id: new ObjectId(req.userId) },
       { $set: { "petStats.lastFed": now, "petStats.status": "happy" } }
     );
 
@@ -1038,7 +1006,7 @@ router.patch("/users/:id/pet-feed", async (req, res) => {
     // Award XP for feeding — isolated so a failure doesn't break the feed response
     let xpResult = null;
     try {
-      xpResult = await awardXP(req.params.id, XP_REWARDS.feed);
+      xpResult = await awardXP(req.userId, XP_REWARDS.feed);
     } catch (xpErr) {
       console.error("XP award failed after feed:", xpErr);
     }
@@ -1056,14 +1024,10 @@ router.patch("/users/:id/pet-feed", async (req, res) => {
 });
 
 // Get activity dates for a given month (used for calendar navigation)
-router.get("/activity-dates/:userId", async (req, res) => {
+router.get("/activity-dates/:userId", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.userId;
     const { month, year } = req.query;
-
-    if (!ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
 
     const m = parseInt(month);
     const y = parseInt(year);
@@ -1098,12 +1062,9 @@ router.get("/activity-dates/:userId", async (req, res) => {
 });
 
 // Analytics endpoint — derives all stats from existing entry data
-router.get("/analytics/:userId", async (req, res) => {
+router.get("/analytics/:userId", authenticateToken, async (req, res) => {
   try {
-    const { userId } = req.params;
-    if (!ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
+    const userId = req.userId;
 
     const [grapesEntries, cogtriEntries] = await Promise.all([
       db.collection("grapes-entries").find({ userId }, { projection: { date: 1, gentle: 1, recreation: 1, accomplishment: 1, pleasure: 1, exercise: 1, social: 1 } }).toArray(),

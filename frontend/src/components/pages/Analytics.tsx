@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import config from "../../config";
+import { authHeaders } from "../../utils/auth";
 
 interface AnalyticsData {
   longestStreak: number;
@@ -42,7 +43,7 @@ const Analytics = () => {
       if (!userId) return;
 
       try {
-        const response = await fetch(`${API_URL}/analytics/${userId}`);
+        const response = await fetch(`${API_URL}/analytics/${userId}`, { headers: authHeaders() });
         if (response.ok) {
           setData(await response.json());
           animRef.current = setTimeout(() => setAnimated(true), 100);

@@ -5,6 +5,7 @@ import { useToast } from "../../hooks/useToast";
 import { fireConfetti } from "../../hooks/useConfetti";
 import { formatFriendlyDateTime } from "../../utils/date";
 import { getStoredUserId } from "../../utils/userId";
+import { authHeaders } from "../../utils/auth";
 
 interface GrapesEntry {
   _id?: string;
@@ -74,7 +75,7 @@ const Grapes = () => {
 
     setLoadingHistory(true);
     try {
-      const response = await fetch(`${API_URL}/grapes/user/${userId}`);
+      const response = await fetch(`${API_URL}/grapes/user/${userId}`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setHistoryEntries(data);
@@ -119,7 +120,6 @@ const Grapes = () => {
     setIsSaving(true);
 
     const dataToSave = {
-      userId,
       date: new Date().toISOString(),
       // localDate is ISO date-only in the user's local timezone (YYYY-MM-DD).
       // The backend uses this — not `date` — to determine "today's" entry so
@@ -137,7 +137,7 @@ const Grapes = () => {
     try {
       const response = await fetch(`${API_URL}/grapes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(dataToSave),
       });
 

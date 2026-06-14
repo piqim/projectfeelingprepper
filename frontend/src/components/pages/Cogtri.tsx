@@ -6,6 +6,7 @@ import { useToast } from "../../hooks/useToast";
 import { fireConfetti } from "../../hooks/useConfetti";
 import { formatFriendlyDateTime } from "../../utils/date";
 import { getStoredUserId } from "../../utils/userId";
+import { authHeaders } from "../../utils/auth";
 
 interface CogTriEntry {
   _id?: string;
@@ -79,7 +80,7 @@ const Cogtri = () => {
 
     setLoadingHistory(true);
     try {
-      const response = await fetch(`${API_URL}/cogtri/user/${userId}`);
+      const response = await fetch(`${API_URL}/cogtri/user/${userId}`, { headers: authHeaders() });
 
       if (response.ok) {
         const data = await response.json();
@@ -168,7 +169,6 @@ const Cogtri = () => {
     setIsSaving(true);
 
     const dataToSave = {
-      userId,
       date: new Date().toISOString(),
       // localDate is ISO date-only in the user's local timezone (YYYY-MM-DD).
       // The backend uses this — not `date` — to determine "today's" entry so
@@ -184,7 +184,7 @@ const Cogtri = () => {
     try {
       const response = await fetch(`${API_URL}/cogtri`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(dataToSave),
       });
 
