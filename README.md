@@ -18,7 +18,8 @@ FeelingPrepper guides users through structured mental health exercises drawn fro
 
 Beyond the core techniques, the app includes:
 
-- **Pet companion** — a fish or seal character the user selects on first login. The pet has a status (happy/neutral/sad) derived from when it was last fed, a level (1–10), and an XP system. XP is earned by saving GRAPES entries, CogTri entries, and feeding the pet. The pet degrades from happy to neutral to sad if not fed for one or two days respectively.
+- **Pet companion** — a fish or seal character the user selects on first login. The pet has a status (happy/neutral/sad) derived from when it was last fed, a level (1–10), and an XP system. XP is earned by saving GRAPES entries, CogTri entries, and feeding the pet. The pet becomes neutral if not fed within 12 hours and sad if not fed within 24 hours.
+- **Dark mode** — a three-way light / dark / system toggle persisted to `localStorage`. Semantic color tokens in Tailwind CSS flip between light and dark values so all pages adapt automatically. The preference is applied before first paint to prevent flash-of-wrong-theme.
 - **Streak tracker** — counts consecutive days the user has submitted at least one entry. Resets if a day is missed.
 - **Activity calendar** — highlights days with any entry in the current month. Supports navigating up to three months back.
 - **Analytics** — shows longest streak, total active days this year, GRAPES category fill counts (horizontal bar chart), and CogTri entries per week for the last four weeks.
@@ -53,8 +54,12 @@ projectfeelingprepper/
 │       ├── assets/            # Static assets (orange.png, etc.)
 │       ├── components/
 │       │   ├── pages/         # Full-page components (Grapes, Cogtri, Analytics, Settings, Dev, Learnmore, Tipp)
+│       │   ├── pet/
+│       │   │   ├── PetCharacter.tsx  # Animated hero-scene pet (Home dashboard)
+│       │   │   └── PetPreview.tsx    # Static thumbnail for pet-selection modal
 │       │   ├── Home.tsx       # Dashboard / home page
-│       │   ├── Navbar.tsx     # Top navbar + sidebar drawer
+│       │   ├── Navbar.tsx     # Top navigation bar
+│       │   ├── BottomTabBar.tsx  # Mobile bottom navigation
 │       │   ├── Login.tsx
 │       │   ├── Register.tsx
 │       │   ├── ProtectedRoute.tsx
@@ -62,11 +67,17 @@ projectfeelingprepper/
 │       │   ├── Toast.tsx      # Toast notification component
 │       │   └── OfflineBanner.tsx
 │       ├── hooks/
-│       │   ├── useToast.ts    # Toast state management hook
-│       │   └── useNetworkStatus.ts  # Online/offline detection hook
+│       │   ├── useToast.ts         # Toast state management hook
+│       │   ├── useTheme.ts         # Light / dark / system theme toggle
+│       │   ├── useConfetti.ts      # Confetti burst helper (level-up, streaks)
+│       │   └── useNetworkStatus.ts # Online/offline detection hook
+│       ├── utils/
+│       │   ├── userId.ts      # MongoDB ObjectId normalisation helpers
+│       │   ├── pet.ts         # Level thresholds, XP helpers, pet mood logic
+│       │   └── date.ts        # Local-date parsing helper
 │       ├── config.ts          # API base URL (switches between dev and prod)
 │       ├── App.tsx            # Root layout: Navbar + OfflineBanner + Outlet
-│       └── main.tsx           # Router definition
+│       └── main.tsx           # Router definition + pre-paint theme application
 └── server/                    # Express backend
     ├── db/
     │   └── connection.js      # MongoDB Atlas connection
@@ -140,7 +151,7 @@ All routes are prefixed by the Express router mounted in `server.js`.
 | `POST` | `/users/:id/change-password` | Change password (bcrypt verify + hash) |
 | `DELETE` | `/users/:id` | Delete user and all their entries |
 | `PATCH` | `/users/:id/pet-selection` | Set pet type (fish or seal) |
-| `PATCH` | `/users/:id/pet-feed` | Feed pet (once per UTC day, awards XP) |
+| `PATCH` | `/users/:id/pet-feed` | Feed pet (12-hour cooldown, awards XP) |
 
 ### GRAPES
 | Method | Path | Description |
@@ -178,7 +189,9 @@ The three all-data GET endpoints (`/users`, `/grapes`, `/cogtri`) require an `X-
 
 **UTC-only date comparisons** — streak increments, feed rate-limiting, and calendar day matching all use UTC. This prevents timezone disagreement near midnight between the client and the MongoDB server.
 
-**Pet status derived client-side** — `getDerivedPetStatus(lastFed)` is computed in the React render on a 60-second tick interval rather than reading the stored `petStats.status` field. This keeps the display accurate as time passes without additional network calls.
+**Pet status derived client-side** — `getDerivedPetStatus(lastFed)` is computed in the React render on a 60-second tick interval rather than reading the stored `petStats.status` field. This keeps the display accurate as time passes without additional network calls. The pet feeding cooldown is 12 hours; the mood thresholds mirror this (happy < 12 h, neutral < 24 h, sad otherwise).
+
+**Dark mode via semantic tokens** — rather than scattering `dark:` Tailwind variants across every element, the CSS defines a small set of semantic tokens (`--color-canvas`, `--color-surface`, `--color-ink`, etc.) that remap under a `.dark` class on `<html>`. All components use these tokens, so the theme flips in one place. The preference is applied synchronously in `main.tsx` before React mounts to prevent flash-of-wrong-theme.
 
 **GRAPES upserts** — submitting GRAPES checks for an existing entry for the current UTC day first. If one exists it is updated rather than a duplicate being inserted. CogTri allows multiple entries per day (different situations can arise) but warns the user before saving a second one.
 

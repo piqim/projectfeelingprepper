@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import config from "../../config";
 import Toast from "../Toast";
 import { useToast } from "../../hooks/useToast";
+import { useTheme, type Theme } from "../../hooks/useTheme";
+import { getStoredUserId } from "../../utils/userId";
 
 interface User {
   _id: string;
@@ -16,6 +18,7 @@ interface User {
 const Settings = () => {
   const navigate = useNavigate();
   const API_URL = config.API_URL;
+  const { theme, setTheme } = useTheme();
 
   // User data
   const [user, setUser] = useState<User | null>(null);
@@ -41,10 +44,6 @@ const Settings = () => {
 
   const { message, type, visible, showToast } = useToast();
 
-  // Get userId from localStorage
-  const getUserId = () => {
-    return localStorage.getItem("userId");
-  };
 
   useEffect(() => {
     fetchUserData();
@@ -52,7 +51,7 @@ const Settings = () => {
 
   // Fetch user data
   const fetchUserData = async () => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
       navigate("/user/login");
       return;
@@ -96,7 +95,7 @@ const Settings = () => {
     setError("");
     setSuccess("");
 
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     // Validation
@@ -180,7 +179,7 @@ const Settings = () => {
   // Export data to CSV
   const handleDataExport = async () => {
     setIsExporting(true);
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     try {
@@ -245,7 +244,7 @@ const Settings = () => {
     }
 
     setIsDeleting(true);
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     try {
@@ -283,14 +282,14 @@ const Settings = () => {
       <div className="min-h-dvh bg-neutral flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
-          <p className="text-dark text-sm">Loading...</p>
+          <p className="text-ink text-sm">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh bg-neutral flex flex-col pb-20">
+    <div className="min-h-dvh bg-neutral flex flex-col pb-24">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
       <div className="bg-primary-light p-4 text-center">
@@ -300,7 +299,7 @@ const Settings = () => {
       </div>
 
       {/* User Info Card */}
-      <div className="bg-white p-4">
+      <div className="bg-surface p-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-gradient-to-br from-primary-base to-primary-light rounded-full flex items-center justify-center">
             <span className="text-2xl font-bold text-highlight">
@@ -308,12 +307,32 @@ const Settings = () => {
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-dark">{user?.username}</h2>
-            <p className="text-sm text-gray-600">{user?.email}</p>
+            <h2 className="text-xl font-bold text-ink">{user?.username}</h2>
+            <p className="text-sm text-muted">{user?.email}</p>
             <p className="text-xs text-primary-light font-semibold mt-1">
               🔥 {user?.streak} day streak
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Appearance / Theme */}
+      <div className="px-6 mt-6">
+        <p className="text-sm font-bold text-ink mb-2">Appearance</p>
+        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
+          {(["light", "dark", "system"] as Theme[]).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setTheme(opt)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
+                theme === opt
+                  ? "bg-primary-light text-highlight shadow-sm"
+                  : "text-muted hover:text-ink"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -322,11 +341,11 @@ const Settings = () => {
         {/* Edit Profile */}
         <button
           onClick={() => setActiveModal("profile")}
-          className="bg-white shadow-lg rounded-xl p-4 text-left font-semibold text-dark hover:bg-gray-50 transition-colors flex items-center justify-between"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
         >
           <span>✏️ Edit Profile</span>
           <svg
-            className="w-5 h-5 text-gray-400"
+            className="w-5 h-5 text-muted"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -343,23 +362,35 @@ const Settings = () => {
         {/* Privacy Settings */}
         <button
           onClick={() => setActiveModal("privacy")}
-          className="bg-white shadow-lg rounded-xl p-4 text-left font-semibold text-dark hover:bg-gray-50 transition-colors flex items-center justify-between"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
         >
           <span>🔒 Privacy & Data</span>
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
+
+        {/* Analytics Link */}
+        <Link
+          to="/analytics"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
+        >
+          <span>📊 Analytics</span>
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        {/* Learn More Link */}
+        <Link
+          to="/learnmore"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
+        >
+          <span>📖 Learn More</span>
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       </div>
 
       {/* Logout Button */}
@@ -375,7 +406,7 @@ const Settings = () => {
       {/* Modals */}
       {activeModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             {/* Close button */}
             <button
               onClick={() => {
@@ -385,7 +416,7 @@ const Settings = () => {
                 setDeleteConfirmText("");
                 setDeletePassword("");
               }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              className="absolute top-4 right-4 text-muted hover:text-ink text-2xl font-bold"
             >
               ×
             </button>
@@ -393,7 +424,7 @@ const Settings = () => {
             {/* Edit Profile Modal */}
             {activeModal === "profile" && (
               <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 mt-2">
-                <h2 className="text-2xl font-bold text-dark border-b-2 border-gray-200 pb-3">
+                <h2 className="text-2xl font-bold text-ink border-b-2 border-line pb-3">
                   ✏️ Edit Profile
                 </h2>
 
@@ -410,7 +441,7 @@ const Settings = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-semibold text-dark mb-2">
+                  <label className="block text-sm font-semibold text-ink mb-2">
                     Username
                   </label>
                   <input
@@ -418,12 +449,12 @@ const Settings = () => {
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                    className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-dark mb-2">
+                  <label className="block text-sm font-semibold text-ink mb-2">
                     Email
                   </label>
                   <input
@@ -431,18 +462,18 @@ const Settings = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                    className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                   />
                 </div>
 
-                <div className="border-t-2 border-gray-200 pt-4 mt-2">
-                  <h3 className="text-lg font-bold text-dark mb-3">
+                <div className="border-t-2 border-line pt-4 mt-2">
+                  <h3 className="text-lg font-bold text-ink mb-3">
                     Change Password
                   </h3>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         Current Password
                       </label>
                       <input
@@ -451,12 +482,12 @@ const Settings = () => {
                         value={formData.password}
                         onChange={handleChange}
                         placeholder="Enter current password"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         New Password
                       </label>
                       <input
@@ -465,12 +496,12 @@ const Settings = () => {
                         value={formData.newPassword}
                         onChange={handleChange}
                         placeholder="At least 6 characters"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         Confirm New Password
                       </label>
                       <input
@@ -479,7 +510,7 @@ const Settings = () => {
                         value={formData.confirmNewPassword}
                         onChange={handleChange}
                         placeholder="Re-enter new password"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
                   </div>
@@ -497,7 +528,7 @@ const Settings = () => {
             {/* Privacy Modal */}
             {activeModal === "privacy" && (
               <div className="flex flex-col gap-6 mt-2">
-                <h2 className="text-2xl font-bold text-dark border-b-2 border-gray-200 pb-3">
+                <h2 className="text-2xl font-bold text-ink border-b-2 border-line pb-3">
                   🔒 Privacy & Data
                 </h2>
 
@@ -514,9 +545,9 @@ const Settings = () => {
                 )}
 
                 {/* Data Export */}
-                <div className="bg-neutral border-2 border-gray-200 rounded-xl p-4">
-                  <h3 className="font-bold text-dark mb-2">📊 Export Your Data</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="bg-surface-2 border-2 border-line rounded-xl p-4">
+                  <h3 className="font-bold text-ink mb-2">📊 Export Your Data</h3>
+                  <p className="text-sm text-muted mb-4">
                     Download all your GRAPES and CogTri entries as a CSV file.
                   </p>
                   <button
@@ -529,14 +560,14 @@ const Settings = () => {
                 </div>
 
                 {/* Delete Account */}
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                  <h3 className="font-bold text-dark mb-2">🗑️ Delete Account</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/30 rounded-xl p-4">
+                  <h3 className="font-bold text-ink mb-2">🗑️ Delete Account</h3>
+                  <p className="text-sm text-muted mb-4">
                     Permanently delete your account and all data. This action cannot be undone.
                   </p>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-dark mb-2">
+                    <label className="block text-sm font-semibold text-ink mb-2">
                       Type "DELETE" to confirm
                     </label>
                     <input
@@ -547,12 +578,12 @@ const Settings = () => {
                         setError("");
                       }}
                       placeholder="DELETE"
-                      className="w-full border-2 border-red-300 rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
+                      className="w-full border-2 border-red-300 bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-dark mb-2">
+                    <label className="block text-sm font-semibold text-ink mb-2">
                       Enter your password
                     </label>
                     <input
@@ -563,7 +594,7 @@ const Settings = () => {
                         setError("");
                       }}
                       placeholder="Your current password"
-                      className="w-full border-2 border-red-300 rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
+                      className="w-full border-2 border-red-300 bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
                     />
                   </div>
 

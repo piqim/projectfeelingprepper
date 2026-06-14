@@ -11,18 +11,18 @@ const Learnmore = () => {
       {/* Info Cards Section */}
       <div className="px-6 py-6 space-y-6">
         {/* GRAPES Card */}
-        <div className="bg-white rounded-2xl shadow-md border-4 border-secondary p-6">
+        <div className="bg-surface rounded-2xl shadow-md border-4 border-secondary p-6">
           <div className="flex gap-3 mb-3 justify-center items-center">
             <div className="bg-secondary rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
               <span className="text-2xl">🍇</span>
             </div>
             <div className="flex-1 ">
-              <h2 className="text-xl font-bold text-dark mb-2 montserrat-alternates">
+              <h2 className="text-xl font-bold text-ink mb-2 montserrat-alternates">
                 GRAPES
               </h2>
             </div>
           </div>
-          <p className="text-lg font-semibold text-gray-700 leading-relaxed mb-4">
+          <p className="text-lg font-semibold text-ink leading-relaxed mb-4">
             The GRAPES method is a simple behavioral activation tool commonly
             used in therapies like Cognitive Behavioral Therapy to help
             individuals structure their days in ways that support emotional
@@ -57,18 +57,18 @@ const Learnmore = () => {
         </div>
 
         {/* Cognitive Triangle Card */}
-        <div className="bg-white rounded-2xl shadow-md border-4 border-primary-light p-6">
+        <div className="bg-surface rounded-2xl shadow-md border-4 border-primary-light p-6">
           <div className="flex gap-3 mb-3 justify-center items-center">
             <div className="bg-primary-light rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
               <span className="text-2xl text-highlight">🔺</span>
             </div>
             <div className="flex-1">
-              <h2 className="text-xl font-bold text-dark mb-2 montserrat-alternates">
+              <h2 className="text-xl font-bold text-ink mb-2 montserrat-alternates">
                 Cognitive Triangle
               </h2>
             </div>
           </div>
-          <p className="text-lg font-semibold text-gray-700 leading-relaxed mb-4">
+          <p className="text-lg font-semibold text-ink leading-relaxed mb-4">
             The Cognitive Triangle, also central to Cognitive Behavioral
             Therapy, illustrates the interconnected relationship between
             thoughts, emotions, and behaviors, showing how a change in one
@@ -104,17 +104,17 @@ const Learnmore = () => {
 
       {/* About Us Section */}
       <div className="bg-primary-light/10">
-        <h2 className="px-6 pt-6 pb-2 text-dark text-3xl font-bold mb-4 montserrat-alternates">
+        <h2 className="px-6 pt-6 pb-2 text-ink text-3xl font-bold mb-4 montserrat-alternates">
           About Us
         </h2>
-        <div className="bg-highlight font-semibold text-lg p-6">
-          <p className="text-gray-700 leading-relaxed mb-4">
+        <div className="bg-highlight dark:bg-surface font-semibold text-lg p-6">
+          <p className="text-ink leading-relaxed mb-4">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
             eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
             ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
             aliquip ex ea commodo consequat.
           </p>
-          <p className="text-gray-700 leading-relaxed">
+          <p className="text-ink leading-relaxed">
             Duis aute irure dolor in reprehenderit in voluptate velit esse
             cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
             cupidatat non proident, sunt in culpa qui officia deserunt mollit
@@ -125,11 +125,11 @@ const Learnmore = () => {
 
       {/* Credits Section */}
       <div className="px-6 py-6">
-        <h2 className="text-dark text-3xl font-bold mb-4 montserrat-alternates">
+        <h2 className="text-ink text-3xl font-bold mb-4 montserrat-alternates">
           Credits
         </h2>
         <div className="font-semibold text-lg mb-4">
-          <p className="text-gray-700 leading-relaxed">
+          <p className="text-ink leading-relaxed">
             Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
             eiusmod tempor incididunt ut labore et dolore magna aliqua.
           </p>
@@ -138,13 +138,13 @@ const Learnmore = () => {
         <div className="space-y-4">
 
           {/* Credit 1 */}
-          <div className="bg-white rounded-2xl shadow-md p-5 border-t-4 border-accent-1">
+          <div className="bg-surface rounded-2xl shadow-md p-5 border-t-4 border-accent-1">
             <div className="flex items-start justify-between gap-4 ">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-dark mb-1">
+                <h3 className="text-lg font-bold text-ink mb-1">
                   Mustaqim Bin Burhanuddin
                 </h3>
-                <p className="text-md font-medium text-gray-600 mb-2">
+                <p className="text-md font-medium text-muted mb-2">
                   Lead Developer - Full-Stack Development & Architecture
                 </p>
                 <a
@@ -197,16 +197,16 @@ const Learnmore = () => {
           </div>
 
           {/* Credit 2 */}
-          <div className="bg-white rounded-2xl shadow-md p-5 border-t-4 border-secondary">
+          <div className="bg-surface rounded-2xl shadow-md p-5 border-t-4 border-secondary">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-dark mb-1">
+                <h3 className="text-lg font-bold text-ink mb-1">
                   Sen Chan
                 </h3>
-                <p className="text-md font-medium text-gray-600 mb-2">
+                <p className="text-md font-medium text-muted mb-2">
                   Lead UI Designer - Interface Design & User Experience
                 </p>
-                <p className="text-sm font-semibold text-gray-600 mb-2">
+                <p className="text-sm font-semibold text-muted mb-2">
                   Link Unavailable
                 </p>
               </div>
@@ -217,16 +217,16 @@ const Learnmore = () => {
           </div>
 
           {/* Credit 2.5 */}
-          <div className="bg-white rounded-2xl shadow-md p-5 border-t-4 border-primary-base">
+          <div className="bg-surface rounded-2xl shadow-md p-5 border-t-4 border-primary-base">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-dark mb-1">
+                <h3 className="text-lg font-bold text-ink mb-1">
                   Fatihah Binti Burhanuddin
                 </h3>
-                <p className="text-md font-medium text-gray-600 mb-2">
+                <p className="text-md font-medium text-muted mb-2">
                   UI Art Designer - Pet Character Design & Visual Assets
                 </p>
-                <p className="text-sm font-semibold text-gray-600 mb-2">
+                <p className="text-sm font-semibold text-muted mb-2">
                   Link Unavailable
                 </p>
               </div>
@@ -238,13 +238,13 @@ const Learnmore = () => {
 
 
           {/* Credit 3 */}
-          <div className="bg-white rounded-2xl shadow-md p-5 border-t-4 border-accent-3">
+          <div className="bg-surface rounded-2xl shadow-md p-5 border-t-4 border-accent-3">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-dark mb-1">
+                <h3 className="text-lg font-bold text-ink mb-1">
                   Jessica Li
                 </h3>
-                <p className="text-md font-medium text-gray-600 mb-2">
+                <p className="text-md font-medium text-muted mb-2">
                   Psychology Background Researcher - CBT Framework
                 </p>
                 <a
@@ -276,13 +276,13 @@ const Learnmore = () => {
           </div>
 
           {/* Credit 4 */}
-          <div className="bg-white rounded-2xl shadow-md p-5 border-t-4 border-accent-2">
+          <div className="bg-surface rounded-2xl shadow-md p-5 border-t-4 border-accent-2">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-bold text-dark mb-1">
+                <h3 className="text-lg font-bold text-ink mb-1">
                   Jaynie Schnell
                 </h3>
-                <p className="text-md font-medium text-gray-600 mb-2">
+                <p className="text-md font-medium text-muted mb-2">
                   Clinical Psychology Researcher - Mental Health Content
                 </p>
                 <a

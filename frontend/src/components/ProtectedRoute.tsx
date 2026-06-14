@@ -56,7 +56,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       <div className="min-h-screen bg-neutral flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
-          <p className="text-dark text-sm">Loading...</p>
+          <p className="text-ink text-sm">Loading...</p>
         </div>
       </div>
     );

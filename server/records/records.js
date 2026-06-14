@@ -1023,8 +1023,8 @@ router.patch("/users/:id/pet-feed", async (req, res) => {
     const now = new Date();
     const lastFed = user.petStats?.lastFed ?? null;
 
-    // Already fed today — return early without writing
-    if (lastFed && isSameUTCDay(new Date(lastFed), now)) {
+    // Already fed within the last 12 hours — return early without writing
+    if (lastFed && (now - new Date(lastFed)) < 12 * 60 * 60 * 1000) {
       return res.status(200).json({ alreadyFed: true, petStats: user.petStats });
     }
 

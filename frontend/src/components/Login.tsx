@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import config from "../config";
+import { extractMongoId } from "../utils/userId";
 
+/**
+ * Login — email + password authentication form.
+ *
+ * On success, stores the normalized userId in localStorage and redirects to Home.
+ * `extractMongoId` is used on the server response because some backend versions
+ * can return the ID wrapped in a BSON object instead of a plain hex string.
+ */
 const Login = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -13,40 +21,6 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const API_URL = config.API_URL;
-
-  const isValidObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
-
-  const extractMongoId = (value: unknown): string | null => {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (isValidObjectId(trimmed)) return trimmed;
-
-      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (
-            parsed &&
-            typeof parsed === "object" &&
-            "$oid" in parsed &&
-            typeof (parsed as { $oid?: unknown }).$oid === "string"
-          ) {
-            const oid = (parsed as { $oid: string }).$oid;
-            return isValidObjectId(oid) ? oid : null;
-          }
-        } catch {
-        }
-      }
-
-      return null;
-    }
-
-    if (value && typeof value === "object" && "$oid" in value) {
-      const oid = (value as { $oid?: unknown }).$oid;
-      if (typeof oid === "string" && isValidObjectId(oid)) return oid;
-    }
-
-    return null;
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -128,74 +102,82 @@ const Login = () => {
 
         {/* Fish Character */}
         <div className="relative flex justify-center mb-2">
-          <svg
-            viewBox="0 0 120 100"
-            className="w-32 h-32"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Body torso */}
-            <path
-              d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18"
-              fill="var(--color-secondary)"
-              stroke="#222089"
-              strokeWidth="3"
-            />
-            {/* Fish body */}
-            <ellipse
-              cx="55"
-              cy="35"
-              rx="35"
-              ry="25"
-              fill="#FF7F50"
-              stroke="#222089"
-              strokeWidth="3"
-            />
-            {/* Smile */}
-            <path
-              d="M 23 45 Q 44 48 55 38"
-              stroke="#222089"
-              strokeWidth="2"
-              fill="none"
-            />
-            {/* Fish tail */}
-            <path
-              d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35"
-              fill="#FF7F50"
-              stroke="#222089"
-              strokeWidth="3"
-            />
-
-            {/* Eye outer */}
-            <circle
-              cx="45"
-              cy="30"
-              r="8"
-              fill="white"
-              stroke="#222089"
-              strokeWidth="2"
-            />
-            {/* Eye inner */}
-            <circle cx="45" cy="30" r="4" fill="#222089" />
-            {/* Gills */}
-            <path
-              d="M 65 30 Q 70 35, 65 40"
-              stroke="#222089"
-              strokeWidth="2"
-              fill="none"
-            />
-            <path
-              d="M 70 32 Q 75 37, 70 42"
-              stroke="#222089"
-              strokeWidth="2"
-              fill="none"
-            />
-
-          </svg>
+          <div className="fp-bob">
+            <svg
+              viewBox="0 0 120 100"
+              className="w-32 h-32"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Body torso */}
+              <path
+                d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18"
+                fill="var(--color-secondary)"
+                stroke="#222089"
+                strokeWidth="3"
+              />
+              {/* Fish body */}
+              <ellipse
+                cx="55"
+                cy="35"
+                rx="35"
+                ry="25"
+                fill="#FF7F50"
+                stroke="#222089"
+                strokeWidth="3"
+              />
+              {/* Smile */}
+              <path
+                d="M 23 45 Q 44 48 55 38"
+                stroke="#222089"
+                strokeWidth="2"
+                fill="none"
+              />
+              {/* Fish tail — wiggles */}
+              <path
+                className="fp-tailwag"
+                d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35"
+                fill="#FF7F50"
+                stroke="#222089"
+                strokeWidth="3"
+              />
+              {/* Eye outer */}
+              <circle
+                cx="45"
+                cy="30"
+                r="8"
+                fill="white"
+                stroke="#222089"
+                strokeWidth="2"
+              />
+              {/* Eye inner — blinks */}
+              <ellipse
+                className="fp-blink"
+                cx="45"
+                cy="30"
+                rx="4"
+                ry="4"
+                fill="#222089"
+              />
+              {/* Gills */}
+              <path
+                d="M 65 30 Q 70 35, 65 40"
+                stroke="#222089"
+                strokeWidth="2"
+                fill="none"
+              />
+              <path
+                d="M 70 32 Q 75 37, 70 42"
+                stroke="#222089"
+                strokeWidth="2"
+                fill="none"
+              />
+            </svg>
+          </div>
         </div>
 
         {/* Login Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-dark mb-6 text-center">
+        <div className="bg-surface rounded-2xl shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-ink mb-6 text-center">
             Sign In
           </h2>
 
@@ -212,7 +194,7 @@ const Login = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Email Address
               </label>
@@ -223,7 +205,7 @@ const Login = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                 disabled={loading}
               />
             </div>
@@ -232,7 +214,7 @@ const Login = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Password
               </label>
@@ -244,13 +226,13 @@ const Login = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 pr-12 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -306,10 +288,10 @@ const Login = () => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-line"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">
+              <span className="px-4 bg-surface text-muted">
                 Don't have an account?
               </span>
             </div>

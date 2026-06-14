@@ -6,6 +6,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 /* CSS IMPORT */
 import "./index.css";
 
+/* THEME — apply saved light/dark preference before first paint */
+import { applyTheme, getStoredTheme } from "./hooks/useTheme.ts";
+applyTheme(getStoredTheme());
+
 /* PAGE COMPONENTS IMPORT */
 import App from "./App";
 // BASE COMPONENTS
