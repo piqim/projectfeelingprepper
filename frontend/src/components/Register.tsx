@@ -14,6 +14,8 @@ import { extractMongoId } from "../utils/userId";
  *
  * On success, stores the normalized userId and redirects to Home.
  */
+type ModalType = "terms" | "privacy" | null;
+
 const Register = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -28,9 +30,33 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [modalText, setModalText] = useState("");
+  const [loadingModal, setLoadingModal] = useState(false);
+
   const { message, type, visible, showToast } = useToast();
 
   const API_URL = config.API_URL;
+
+  const openModal = async (type: "terms" | "privacy") => {
+    setModalType(type);
+    setLoadingModal(true);
+    setModalText("");
+    const url =
+      type === "terms" ? "/terms-and-conditions.txt" : "/privacy-policy.txt";
+    try {
+      const res = await fetch(url);
+      const text = await res.text();
+      setModalText(text);
+    } catch {
+      setModalText("Unable to load this document. Please try again later.");
+    } finally {
+      setLoadingModal(false);
+    }
+  };
+
+  const closeModal = () => setModalType(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
@@ -74,6 +100,11 @@ const Register = () => {
 
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
+      return;
+    }
+
+    if (!termsAccepted) {
+      setError("You must agree to the Terms and Conditions and Privacy Policy to create an account.");
       return;
     }
 
@@ -392,6 +423,45 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Terms & Privacy Acceptance */}
+            <div className="flex items-start gap-3 p-4 bg-gray-50 dark:bg-surface-2 rounded-lg border-2 border-line">
+              <input
+                type="checkbox"
+                id="termsAccepted"
+                checked={termsAccepted}
+                onChange={(e) => {
+                  setTermsAccepted(e.target.checked);
+                  if (error) setError("");
+                }}
+                className="mt-0.5 w-4 h-4 flex-shrink-0 accent-primary-light cursor-pointer"
+                disabled={loading}
+              />
+              <label
+                htmlFor="termsAccepted"
+                className="text-sm text-ink leading-relaxed cursor-pointer select-none"
+              >
+                I have read and agree to the{" "}
+                <button
+                  type="button"
+                  onClick={() => openModal("terms")}
+                  className="text-primary-light font-semibold underline hover:text-primary-base transition-colors"
+                  disabled={loading}
+                >
+                  Terms and Conditions
+                </button>{" "}
+                and{" "}
+                <button
+                  type="button"
+                  onClick={() => openModal("privacy")}
+                  className="text-primary-light font-semibold underline hover:text-primary-base transition-colors"
+                  disabled={loading}
+                >
+                  Privacy Policy
+                </button>
+                . <span className="text-red-500">*</span>
+              </label>
+            </div>
+
             {/* Register Button */}
             <button
               type="submit"
@@ -430,6 +500,78 @@ const Register = () => {
           </p>
         </div>
       </div>
+
+      {/* Legal Modal — bottom sheet */}
+      {modalType && (
+        <div
+          className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center px-4"
+          onClick={closeModal}
+        >
+          <div
+            className="bg-surface w-full max-w-md rounded-2xl h-[80vh] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-line flex-shrink-0">
+              <h3 className="text-base font-bold text-ink">
+                {modalType === "terms"
+                  ? "Terms & Conditions"
+                  : "Privacy Policy"}
+              </h3>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="text-muted hover:text-ink p-1 rounded-lg hover:bg-surface-2 transition-colors"
+                aria-label="Close"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1 px-5 py-4">
+              {loadingModal ? (
+                <div className="flex justify-center items-center py-12">
+                  <div className="w-7 h-7 border-2 border-primary-light border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : (
+                <pre className="text-xs text-ink whitespace-pre-wrap font-sans leading-relaxed">
+                  {modalText}
+                </pre>
+              )}
+            </div>
+
+            {/* Modal Footer — accept button */}
+            <div className="px-5 py-4 border-t border-line flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setTermsAccepted(true);
+                  closeModal();
+                }}
+                className="w-full bg-primary-light text-highlight font-bold py-3 rounded-lg hover:bg-primary-base transition-colors"
+              >
+                I Agree
+              </button>
+              <p className="text-xs text-muted text-center mt-2">
+                Tapping "I Agree" checks the agreement box on the form.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

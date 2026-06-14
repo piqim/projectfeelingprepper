@@ -26,6 +26,7 @@ import Settings from "./components/pages/Settings.tsx";
 import Tipp from "./components/pages/Tipp.tsx";
 import Analytics from "./components/pages/Analytics.tsx";
 import Dev from "./components/pages/Dev.tsx";
+import Legal from "./components/pages/Legal.tsx";
 
 /* ROUTE(S) */
 const router = createBrowserRouter([
@@ -113,6 +114,12 @@ const router = createBrowserRouter([
   {
     path: "/dev",
     element: <Dev />,
+  },
+
+  /* LEGAL ROUTE — public, no auth required */
+  {
+    path: "/legal",
+    element: <Legal />,
   },
 ]);
 

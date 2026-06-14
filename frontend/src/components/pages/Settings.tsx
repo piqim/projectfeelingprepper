@@ -377,6 +377,17 @@ const Settings = () => {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </Link>
+
+        {/* Legal Link */}
+        <Link
+          to="/legal"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
+        >
+          <span>⚖️ Terms & Privacy</span>
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       </div>
 
       {/* Logout Button */}

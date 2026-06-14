@@ -1,0 +1,210 @@
+FEELINGPREPPER — TERMS AND CONDITIONS
+
+Effective Date: June 14, 2026
+Last Updated: June 14, 2026
+
+PLEASE READ THESE TERMS AND CONDITIONS CAREFULLY BEFORE USING THE FEELINGPREPPER APPLICATION.
+
+By creating an account or using FeelingPrepper, you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree, do not use the application.
+
+================================================================================
+1. IMPORTANT HEALTH AND SAFETY DISCLAIMER
+================================================================================
+
+FeelingPrepper is a wellness and self-help tool designed to support emotional well-being through evidence-based techniques such as Cognitive Behavioral Therapy (CBT) and Dialectical Behavior Therapy (DBT) activities.
+
+FEELINGPREPPER IS NOT A MEDICAL DEVICE AND DOES NOT PROVIDE MEDICAL ADVICE, DIAGNOSIS, OR TREATMENT. The content, tools, and features within FeelingPrepper are for informational and educational purposes only and are NOT a substitute for professional mental health care, psychotherapy, or medical advice from a qualified healthcare provider.
+
+IF YOU ARE EXPERIENCING A MENTAL HEALTH EMERGENCY, ARE IN CRISIS, OR ARE HAVING THOUGHTS OF SELF-HARM OR SUICIDE, PLEASE IMMEDIATELY:
+
+  - Call emergency services: 911 (USA)
+  - Contact the 988 Suicide and Crisis Lifeline: Call or text 988 (USA)
+  - Text HOME to 741741 to reach the Crisis Text Line (USA)
+  - Contact your local emergency services or go to your nearest emergency room
+
+Always seek the guidance of a qualified mental health professional for any conditions or concerns about your mental health. Do not disregard or delay seeking professional medical advice because of anything you read or use within FeelingPrepper.
+
+================================================================================
+2. ABOUT THE APPLICATION
+================================================================================
+
+FeelingPrepper is a mobile-first mental health support application developed and operated by Mustaqim Bin Burhanuddin ("Developer," "we," "us," or "our"). The application provides tools based on evidence-based therapeutic techniques, including behavioral activation (GRAPES) and cognitive behavioral therapy exercises (Cognitive Triangle).
+
+FeelingPrepper is intended to complement, not replace, professional mental health support.
+
+================================================================================
+3. ELIGIBILITY
+================================================================================
+
+3.1 Age Requirement. You must be at least 13 years of age to use FeelingPrepper. If you are between the ages of 13 and 17, you represent that you have obtained your parent or legal guardian's permission to use the application. We do not knowingly collect personal information from children under the age of 13. If we become aware that a child under 13 has provided us with personal information, we will delete that account and associated data promptly.
+
+3.2 Accurate Information. You agree to provide accurate, current, and complete information when creating your account and to maintain and promptly update your account information to keep it accurate and complete.
+
+3.3 Capacity. By agreeing to these Terms, you represent that you have the legal capacity to enter into a binding agreement.
+
+================================================================================
+4. USER ACCOUNTS
+================================================================================
+
+4.1 Registration. To access FeelingPrepper's features, you must create an account with a username (3–5 characters), a valid email address, and a password of at least 6 characters.
+
+4.2 Account Security. You are solely responsible for maintaining the confidentiality of your account credentials, including your password. You agree to:
+  a) Keep your password secure and not share it with anyone;
+  b) Notify us immediately at mbinburhanuddin@gmail.com if you become aware of any unauthorized access to or use of your account;
+  c) Ensure you log out of your account at the end of each session, especially on shared devices.
+
+We are not liable for any loss or damage arising from your failure to comply with the above, or from unauthorized access to your account.
+
+4.3 One Account Per User. Each user may only maintain one account. Creating multiple accounts to circumvent suspensions, restrictions, or for any other reason is prohibited.
+
+================================================================================
+5. ACCEPTABLE USE
+================================================================================
+
+5.1 You agree to use FeelingPrepper only for lawful, personal, non-commercial purposes and in a manner consistent with these Terms and all applicable laws and regulations.
+
+5.2 You agree NOT to:
+  a) Use the application for any commercial purpose or for financial gain without our express written permission;
+  b) Attempt to gain unauthorized access to any part of the application, its backend systems, or our servers or databases;
+  c) Reverse engineer, decompile, disassemble, or otherwise attempt to derive the source code of the application or any underlying intellectual property;
+  d) Upload, transmit, or distribute any viruses, malware, spyware, or any other malicious code;
+  e) Use the application in any way that could damage, disable, overburden, or impair the proper functioning of the application or its servers;
+  f) Impersonate any person or entity, or falsely represent your affiliation with any person or entity;
+  g) Scrape, crawl, or use automated means to access or collect data from the application;
+  h) Attempt to bypass any security features or access controls of the application.
+
+================================================================================
+6. USER-GENERATED CONTENT
+================================================================================
+
+6.1 Any thoughts, emotions, reflections, or other content you enter into FeelingPrepper's tools (such as the Cognitive Triangle journal entries or GRAPES logs) remain your own. You retain ownership of this content.
+
+6.2 By entering content into FeelingPrepper, you grant us a limited, non-exclusive license to store and process that content solely for the purpose of providing you with the application's features. We do not use your personal journal entries for advertising, profiling, or any purpose beyond operating the application.
+
+6.3 You are solely responsible for the content you enter. Do not enter content that is unlawful, harmful, or that violates any third-party rights.
+
+================================================================================
+7. DATA AND PRIVACY
+================================================================================
+
+Your use of FeelingPrepper is also governed by our Privacy Policy, which is incorporated into these Terms by reference. By using the application, you consent to the collection and use of your information as described in the Privacy Policy. A copy of the Privacy Policy is available within the application and as a separate document.
+
+================================================================================
+8. INTELLECTUAL PROPERTY
+================================================================================
+
+8.1 All content, design, graphics, logos, code, and features within FeelingPrepper — including but not limited to the pet characters (Fish and Seal), the GRAPES tracker design, the Cognitive Triangle tool, and all visual assets — are owned by or licensed to Mustaqim Bin Burhanuddin and are protected by applicable intellectual property laws including copyright, trademark, and trade secret laws.
+
+8.2 You are granted a limited, personal, non-exclusive, non-transferable, revocable license to access and use FeelingPrepper for your personal, non-commercial purposes only. This license does not include the right to:
+  a) Copy, reproduce, or distribute any portion of the application;
+  b) Modify, adapt, or create derivative works from the application or its content;
+  c) Use any of our trademarks, logos, or branding without our prior written consent.
+
+8.3 Any unauthorized use of the application's intellectual property may violate copyright, trademark, and other laws and is strictly prohibited.
+
+================================================================================
+9. DISCLAIMER OF WARRANTIES
+================================================================================
+
+FEELINGPREPPER IS PROVIDED ON AN "AS IS" AND "AS AVAILABLE" BASIS WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED. TO THE FULLEST EXTENT PERMITTED BY APPLICABLE LAW, WE EXPRESSLY DISCLAIM ALL WARRANTIES, INCLUDING BUT NOT LIMITED TO:
+
+  - IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT;
+  - WARRANTIES THAT THE APPLICATION WILL BE UNINTERRUPTED, ERROR-FREE, OR FREE OF VIRUSES OR OTHER HARMFUL COMPONENTS;
+  - WARRANTIES AS TO THE ACCURACY, RELIABILITY, COMPLETENESS, OR TIMELINESS OF ANY CONTENT WITHIN THE APPLICATION;
+  - WARRANTIES THAT THE APPLICATION IS SUITABLE FOR YOUR SPECIFIC MENTAL HEALTH NEEDS OR CIRCUMSTANCES.
+
+WE DO NOT WARRANT THAT USE OF THE APPLICATION WILL IMPROVE YOUR MENTAL HEALTH OR EMOTIONAL WELL-BEING. RESULTS WILL VARY BETWEEN INDIVIDUALS.
+
+================================================================================
+10. LIMITATION OF LIABILITY
+================================================================================
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW:
+
+10.1 IN NO EVENT SHALL THE DEVELOPER, HIS COLLABORATORS, CONTRIBUTORS, OR SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, INCLUDING BUT NOT LIMITED TO:
+  - Loss of data or loss of goodwill;
+  - Loss of profits or business opportunities;
+  - Personal injury or emotional harm;
+  - Any damages arising from your reliance on the application as a substitute for professional mental health care.
+
+10.2 THE DEVELOPER'S TOTAL CUMULATIVE LIABILITY TO YOU FOR ALL CLAIMS ARISING OUT OF OR RELATED TO THESE TERMS OR YOUR USE OF FEELINGPREPPER SHALL NOT EXCEED THE GREATER OF (A) THE TOTAL AMOUNT YOU HAVE PAID TO USE THE APPLICATION IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM, OR (B) FIFTY DOLLARS (USD $50).
+
+10.3 SOME JURISDICTIONS DO NOT ALLOW THE EXCLUSION OR LIMITATION OF LIABILITY FOR CERTAIN TYPES OF DAMAGES. IN SUCH JURISDICTIONS, OUR LIABILITY SHALL BE LIMITED TO THE FULLEST EXTENT PERMITTED BY LAW.
+
+================================================================================
+11. INDEMNIFICATION
+================================================================================
+
+You agree to indemnify, defend, and hold harmless the Developer, and any contributors, collaborators, and third-party service providers from and against any and all claims, liabilities, damages, losses, costs, expenses, and fees (including reasonable legal fees) that arise out of or relate to:
+  a) Your use of or access to FeelingPrepper;
+  b) Your violation of these Terms;
+  c) Your violation of any rights of a third party;
+  d) Any content you submit or transmit through the application.
+
+================================================================================
+12. THIRD-PARTY SERVICES
+================================================================================
+
+FeelingPrepper relies on the following third-party services to operate:
+  - MongoDB Atlas (MongoDB, Inc.) — for secure cloud database hosting
+  - Render (Render Services, Inc.) — for backend application hosting
+
+Your use of FeelingPrepper is subject to the terms and privacy policies of these third-party providers. We are not responsible for the data practices or terms of any third-party services. We encourage you to review their policies:
+  - MongoDB Atlas Privacy Policy: https://www.mongodb.com/legal/privacy-policy
+  - Render Privacy Policy: https://render.com/privacy
+
+================================================================================
+13. MODIFICATIONS TO THE APPLICATION OR TERMS
+================================================================================
+
+13.1 Application Changes. We reserve the right to modify, update, suspend, or discontinue FeelingPrepper (or any part of it) at any time, with or without prior notice. We will not be liable to you or any third party for any modification, suspension, or discontinuation of the application.
+
+13.2 Terms Updates. We may update these Terms at any time. When we do, we will update the "Last Updated" date at the top of this document and notify you within the application. Material changes will be communicated with reasonable notice where practicable. Your continued use of FeelingPrepper after the effective date of any updated Terms constitutes your acceptance of those changes.
+
+================================================================================
+14. TERMINATION
+================================================================================
+
+14.1 Termination by You. You may terminate your use of FeelingPrepper at any time by deleting your account through the Settings page. Account deletion permanently removes your account and all associated data from our systems (subject to backup retention periods described in our Privacy Policy).
+
+14.2 Termination by Us. We reserve the right to suspend or terminate your account and access to FeelingPrepper at any time, with or without notice, if we reasonably believe you have violated these Terms, if required by law, or if we determine such action is necessary to protect the application or other users.
+
+14.3 Effect of Termination. Upon termination of your account, your right to use FeelingPrepper immediately ceases. Sections of these Terms that by their nature should survive termination (including but not limited to intellectual property, disclaimer of warranties, limitation of liability, and indemnification) shall survive.
+
+================================================================================
+15. GOVERNING LAW AND DISPUTE RESOLUTION
+================================================================================
+
+15.1 Governing Law. These Terms shall be governed by and construed in accordance with the laws of the State of California, United States, without regard to its conflict of law principles.
+
+15.2 Dispute Resolution. Any disputes arising out of or in connection with these Terms or your use of FeelingPrepper shall first be attempted to be resolved informally by contacting us at mbinburhanuddin@ucsd.edu. If informal resolution is unsuccessful, disputes shall be subject to the exclusive jurisdiction of the state and federal courts located in San Diego County, California.
+
+15.3 Waiver of Class Actions. TO THE EXTENT PERMITTED BY LAW, YOU AGREE THAT ANY DISPUTE RESOLUTION PROCEEDINGS WILL BE CONDUCTED ONLY ON AN INDIVIDUAL BASIS AND NOT AS PART OF A CLASS, CONSOLIDATED, OR REPRESENTATIVE ACTION.
+
+================================================================================
+16. GENERAL PROVISIONS
+================================================================================
+
+16.1 Entire Agreement. These Terms, together with the Privacy Policy, constitute the entire agreement between you and us regarding your use of FeelingPrepper and supersede all prior agreements and understandings.
+
+16.2 Waiver. Our failure to enforce any right or provision of these Terms will not be considered a waiver of those rights.
+
+16.3 Severability. If any provision of these Terms is found to be invalid or unenforceable by a court, the remaining provisions will remain in full force and effect.
+
+16.4 Assignment. You may not assign or transfer your rights under these Terms without our prior written consent. We may assign our rights and obligations under these Terms without restriction.
+
+================================================================================
+17. CONTACT INFORMATION
+================================================================================
+
+If you have any questions, concerns, or requests regarding these Terms and Conditions, please contact us:
+
+  Email:       mbinburhanuddin@gmail.com
+  Application: FeelingPrepper
+  Developer:   Mustaqim Bin Burhanuddin
+
+We will endeavor to respond to all inquiries within a reasonable time.
+
+================================================================================
+
+© 2026 FeelingPrepper. All rights reserved.
