@@ -400,7 +400,6 @@ const Settings = () => {
                 setError("");
                 setSuccess("");
                 setDeleteConfirmText("");
-                setDeletePassword("");
               }}
               className="absolute top-4 right-4 text-muted hover:text-ink text-2xl font-bold"
             >
