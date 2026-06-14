@@ -1,5 +1,11 @@
 import { useState, useEffect } from "react";
 import config from "../../config";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
+import { fireConfetti } from "../../hooks/useConfetti";
+import { formatFriendlyDateTime } from "../../utils/date";
+import { getStoredUserId } from "../../utils/userId";
+import { authHeaders } from "../../utils/auth";
 
 interface GrapesEntry {
   _id?: string;
@@ -13,11 +19,30 @@ interface GrapesEntry {
   completed: boolean;
 }
 
+type GrapesField = "gentle" | "recreation" | "accomplishment" | "pleasure" | "exercise" | "social";
+
+/**
+ * Grapes — daily GRAPES activity tracker.
+ *
+ * Lets the user record one activity per GRAPES category, then save as
+ * "completed" (all 6 filled) or "partial". Entries are immutable after saving.
+ * History is fetched on mount and refreshed whenever the history modal opens.
+ */
+
+// Drives the input grid — letter badge, label, and placeholder in one place
+// so adding or reordering categories only requires changing this array.
+const GRAPES_FIELDS: { key: GrapesField; letter: string; label: string; placeholder: string }[] = [
+  { key: "gentle",         letter: "G", label: "Gentle-to-Self", placeholder: "ie. comforted me" },
+  { key: "recreation",     letter: "R", label: "Recreation",     placeholder: "ie. played a game" },
+  { key: "accomplishment", letter: "A", label: "Accomplishment", placeholder: "ie. won a game" },
+  { key: "pleasure",       letter: "P", label: "Pleasure",       placeholder: "ie. ate a burger" },
+  { key: "exercise",       letter: "E", label: "Exercise",       placeholder: "ie. benched 220 lbs" },
+  { key: "social",         letter: "S", label: "Social",         placeholder: "ie. hung out w/ fam" },
+];
+
 const Grapes = () => {
-  // API URL from config
   const API_URL = config.API_URL;
 
-  // State for current entries (one input per category)
   const [entries, setEntries] = useState({
     gentle: "",
     recreation: "",
@@ -27,29 +52,22 @@ const Grapes = () => {
     social: "",
   });
 
-  // Modal states
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] = useState<GrapesEntry | null>(null);
   const [isFullyFilled, setIsFullyFilled] = useState(false);
-
-  // History data from MongoDB
   const [historyEntries, setHistoryEntries] = useState<GrapesEntry[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Get userId from localStorage
-  const getUserId = () => {
-    return localStorage.getItem("userId");
-  };
+  const { message, type, visible, showToast } = useToast();
 
   useEffect(() => {
-    // Fetch history on component mount
     fetchHistory();
   }, []);
 
-  // Fetch user's GRAPES history from MongoDB
   const fetchHistory = async () => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
       console.error("No userId found");
       return;
@@ -57,60 +75,56 @@ const Grapes = () => {
 
     setLoadingHistory(true);
     try {
-      const response = await fetch(`${API_URL}/grapes/user/${userId}`);
-
+      const response = await fetch(`${API_URL}/grapes/user/${userId}`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setHistoryEntries(data);
-        console.log("Fetched GRAPES history:", data);
       } else {
-        console.error("Failed to fetch history:", response.status);
-        alert("Failed to load history. Please try again.");
+        showToast("Failed to load history. Please try again.", "error");
       }
-    } catch (error) {
-      console.error("Error fetching history:", error);
-      alert("Error loading history. Please check your connection.");
+    } catch {
+      showToast("Error loading history. Please check your connection.", "error");
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  // Handlers
-  const handleInputChange = (
-    category: keyof typeof entries,
-    value: string
-  ) => {
+  const handleInputChange = (category: keyof typeof entries, value: string) => {
     setEntries({ ...entries, [category]: value });
   };
 
+  /**
+   * Opens the save confirmation modal.
+   * Sets `isFullyFilled` so the modal shows the correct copy and button variant:
+   * all-6-filled → "Done / Nope", partial → "Save Partial / Nope".
+   */
   const handleSaveClick = () => {
-    // Check if at least one field is filled
     const hasContent = Object.values(entries).some((val) => val.trim() !== "");
     if (!hasContent) {
-      alert("Please fill in at least one activity before saving.");
+      showToast("Please fill in at least one activity before saving.", "error");
       return;
     }
-
-    // Check if all 6 fields are filled
     const allFieldsFilled = Object.values(entries).every((val) => val.trim() !== "");
     setIsFullyFilled(allFieldsFilled);
-
-    // Always show modal for confirmation
     setShowSaveModal(true);
   };
 
   const handleConfirmSave = async (completed: boolean) => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
-      alert("You must be logged in to save entries.");
+      showToast("You must be logged in to save entries.", "error");
       setShowSaveModal(false);
       return;
     }
 
-    // Prepare data for MongoDB
+    setIsSaving(true);
+
     const dataToSave = {
-      userId,
       date: new Date().toISOString(),
+      // localDate is ISO date-only in the user's local timezone (YYYY-MM-DD).
+      // The backend uses this — not `date` — to determine "today's" entry so
+      // a save at 11 PM local time isn't counted as the next UTC day.
+      localDate: new Date().toLocaleDateString("en-CA"),
       gentle: entries.gentle,
       recreation: entries.recreation,
       accomplishment: entries.accomplishment,
@@ -120,48 +134,40 @@ const Grapes = () => {
       completed,
     };
 
-    console.log("Saving to MongoDB:", dataToSave);
-
     try {
       const response = await fetch(`${API_URL}/grapes`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(dataToSave),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("Saved successfully:", result);
-
-        // Clear form after save
-        setEntries({
-          gentle: "",
-          recreation: "",
-          accomplishment: "",
-          pleasure: "",
-          exercise: "",
-          social: "",
-        });
-
-        // Refresh history to show new entry
+        const data = await response.json();
+        setEntries({ gentle: "", recreation: "", accomplishment: "", pleasure: "", exercise: "", social: "" });
         await fetchHistory();
-
         setShowSaveModal(false);
-        alert("Entry saved successfully!");
+        showToast("Saved — nice work today 💜", "success");
+        if (completed) fireConfetti("big");
+        if (data.leveledUp) {
+          showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
+          fireConfetti("big");
+        }
+        if (data.streakUpdated === false) {
+          showToast("Entry saved, but your streak couldn't be updated right now.", "info");
+        }
       } else {
         const error = await response.json();
-        console.error("Save failed:", error);
-        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+        showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
       }
-    } catch (error) {
-      console.error("Error saving:", error);
-      alert("Error saving entry. Please check your connection.");
+    } catch {
+      showToast("Error saving entry. Please check your connection.", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   const handleViewHistory = () => {
     setShowHistoryModal(true);
-    // Refresh history when opening modal
     fetchHistory();
   };
 
@@ -169,6 +175,11 @@ const Grapes = () => {
     setSelectedHistoryEntry(entry);
   };
 
+  /**
+   * Closes any open modal when the user taps the backdrop.
+   * The `e.target === e.currentTarget` guard ensures clicks on the modal card
+   * itself don't bubble up and accidentally dismiss it.
+   */
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       setShowSaveModal(false);
@@ -177,226 +188,116 @@ const Grapes = () => {
     }
   };
 
+  const filledCount = Object.values(entries).filter((val) => val.trim() !== "").length;
+
   return (
-    <div className=" bg-highlight pb-10">
+    <div className="bg-neutral pb-24">
+      <Toast message={message} type={type} visible={visible} />
       {/* Header */}
-      <div className="px-6 pt-6 pb-4">
-        <h1 className="text-dark text-2xl min-[420px]:text-3xl font-bold text-center montserrat-alternates">
-          GRAPES (Daily Tracker)
+      <div className="bg-primary-light p-4 text-center">
+        <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
+          GRAPES Daily Tracker
         </h1>
-        <div className="w-full h-1 bg-dark mt-2"></div>
       </div>
 
-      {/* Grape Vine Container */}
-      <div className="relative px-2 mt-2 rounded-2xl bg-neutral" style={{ minHeight: "700px" }}>
-        {/* SVG Tree Structure */}
-        <svg
-          className="absolute inset-0 w-full h-full pointer-events-none"
-          viewBox="0 0 400 700"
-          style={{ zIndex: 0 }}
-        >
-          {/* Tree trunk/branches */}
-          <path
-            d="M 240 650 Q 50 550, 180 450 Q 150 390, 120 280 Q 100 280, 120 100"
-            stroke="#0281A7"
-            strokeWidth="12"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 80 470 Q 200 300, 240 340 Q 270 310, 300 300"
-            stroke="#0281A7"
-            strokeWidth="10"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 160 280 Q 20 300, 350 90 Q 300 310"
-            stroke="#0281A7"
-            strokeWidth="10"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 240 350 Q 260 300, 280 250"
-            stroke="#0281A7"
-            strokeWidth="8"
-            fill="none"
-            strokeLinecap="round"
-          />
-          <path
-            d="M 140 450 Q 50 400, 290 500"
-            stroke="#0281A7"
-            strokeWidth="8"
-            fill="none"
-            strokeLinecap="round"
-          />
+      {/* Progress hint */}
+      <div className="px-5 mt-4 flex items-center justify-between">
+        <p className="text-sm font-semibold text-ink/60">Fill in today's activities</p>
+        <span className="text-sm font-bold text-ink">{filledCount}/6</span>
+      </div>
 
+      {/* GRAPES grid with faint vine watermark */}
+      <div className="relative mt-3">
+        {/* Faint grapevine — purely decorative, sits behind the grid */}
+        <svg
+          className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.25]"
+          viewBox="0 0 400 600"
+          preserveAspectRatio="xMidYMid slice"
+          aria-hidden="true"
+        >
+          {/* Branches */}
+          <g fill="none" stroke="#6F9A4B" strokeLinecap="round">
+            <path d="M 40 5 Q 130 110 95 235 Q 60 360 205 430 Q 345 495 360 600" strokeWidth="7" />
+            <path d="M 95 235 Q 160 225 215 175" strokeWidth="5" />
+            <path d="M 205 430 Q 255 388 305 398" strokeWidth="5" />
+          </g>
           {/* Leaves */}
-          <ellipse cx="200" cy="620" rx="50" ry="35" fill="#A7CC81" opacity="0.7" />
-          <ellipse cx="240" cy="640" rx="45" ry="32" fill="#A7CC81" opacity="0.8" />
-          <ellipse cx="210" cy="660" rx="40" ry="28" fill="#A7CC81" opacity="0.9" />
+          <g fill="#6F9A4B">
+            <ellipse cx="216" cy="172" rx="15" ry="8" transform="rotate(-32 216 172)" />
+            <ellipse cx="306" cy="395" rx="15" ry="8" transform="rotate(22 306 395)" />
+            <ellipse cx="78" cy="150" rx="13" ry="7" transform="rotate(-10 78 150)" />
+          </g>
+          {/* Grape clusters */}
+          <g fill="#9B5FB8">
+            {/* top-right cluster */}
+            <circle cx="300" cy="80" r="9" />
+            <circle cx="287" cy="96" r="9" />
+            <circle cx="313" cy="96" r="9" />
+            <circle cx="300" cy="112" r="9" />
+            <circle cx="287" cy="128" r="9" />
+            <circle cx="313" cy="128" r="9" />
+            <circle cx="300" cy="144" r="9" />
+            {/* bottom-left cluster */}
+            <circle cx="120" cy="320" r="8" />
+            <circle cx="108" cy="334" r="8" />
+            <circle cx="132" cy="334" r="8" />
+            <circle cx="120" cy="348" r="8" />
+            <circle cx="108" cy="362" r="8" />
+            <circle cx="132" cy="362" r="8" />
+          </g>
         </svg>
 
-        {/* Grape Circles with Inputs */}
-        {/* G - Gentle (Top Left) */}
-        <div
-          className="min-[420px]:left-[9%] left-[5%]
-          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "1%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">G</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Gentle-to-Self
-          </div>
-          <input
-            type="text"
-            value={entries.gentle}
-            onChange={(e) => handleInputChange("gentle", e.target.value)}
-            placeholder="ie. comforted me"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
-        </div>
+        <div className="relative grid grid-cols-2 gap-x-4 gap-y-5 px-5">
+        {GRAPES_FIELDS.map(({ key, letter, label, placeholder }) => {
+          const filled = entries[key].trim() !== "";
+          return (
+            <div key={key} className="flex flex-col items-center text-center">
+              {/* Grape badge */}
+              <div
+                className={`relative w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold mb-2 transition-all duration-200 ${
+                  filled
+                    ? "bg-[#A86FC4] text-white ring-2 ring-[#7B40A8] ring-offset-2"
+                    : "bg-secondary text-dark"
+                }`}
+              >
+                {letter}
+                {filled && (
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-accent-3 rounded-full flex items-center justify-center shadow-sm">
+                    <span className="text-white text-[10px] font-bold leading-none">✓</span>
+                  </div>
+                )}
+              </div>
 
-        {/* R - Recreation (Top Right) */}
-        <div
-          className="min-[420px]:right-[9%] right-[4%]
-          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "7.5%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">R</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Recreation
-          </div>
-          <input
-            type="text"
-            value={entries.recreation}
-            onChange={(e) => handleInputChange("recreation", e.target.value)}
-            placeholder="ie. played a game"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
-        </div>
+              {/* Label */}
+              <div className="text-xs font-bold text-ink mb-2 leading-tight min-h-[2rem] flex items-center">
+                {label}
+              </div>
 
-        {/* A - Accomplishment (Middle Left) */}
-        <div
-          className="min-[420px]:left-[10%] left-[4.5%]
-          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "27.5%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">A</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Accomplishment
-          </div>
-          <input
-            type="text"
-            value={entries.accomplishment}
-            onChange={(e) =>
-              handleInputChange("accomplishment", e.target.value)
-            }
-            placeholder="ie. won a game"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
-        </div>
-
-        {/* P - Pleasure (Middle Right) */}
-        <div
-          className="min-[420px]:right-[9%] right-[4%]
-          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "32.5%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">P</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Pleasure
-          </div>
-          <input
-            type="text"
-            value={entries.pleasure}
-            onChange={(e) => handleInputChange("pleasure", e.target.value)}
-            placeholder="ie. ate a burger"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
-        </div>
-
-        {/* E - Exercise (Bottom Left) */}
-        <div
-          className="min-[410px]:left-[13.5%] left-[4.5%]
-          absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            top: "52.5%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">E</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Exercise
-          </div>
-          <input
-            type="text"
-            value={entries.exercise}
-            onChange={(e) => handleInputChange("exercise", e.target.value)}
-            placeholder="ie. benched 220 lbs"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
-        </div>
-
-        {/* S - Social (Bottom Right) */}
-        <div
-          className="absolute bg-secondary rounded-full flex flex-col items-center justify-baseline p-4"
-          style={{
-            width: "170px",
-            height: "170px",
-            right: "2.5%",
-            top: "60%",
-            zIndex: 10,
-          }}
-        >
-          <div className="text-4xl font-bold text-dark mb-1">S</div>
-          <div className="text-sm text-dark font-bold text-center mb-3">
-            Social
-          </div>
-          <input
-            type="text"
-            value={entries.social}
-            onChange={(e) => handleInputChange("social", e.target.value)}
-            placeholder="ie. hung out w/ fam"
-            className="w-full text-xs font-semibold px-3 py-2 rounded-full border-none bg-white text-center shadow-sm"
-          />
+              {/* Input */}
+              <input
+                type="text"
+                value={entries[key]}
+                onChange={(e) => handleInputChange(key, e.target.value)}
+                placeholder={placeholder}
+                className="w-full text-sm font-semibold px-3 py-2 rounded-xl bg-surface border border-line text-ink placeholder:text-muted text-center shadow-sm focus:border-secondary focus:outline-none transition-colors"
+              />
+            </div>
+          );
+        })}
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="px-6 mt-8 flex gap-4">
+      <div className="px-6 mt-8 flex gap-4 max-w-md mx-auto">
         <button
           onClick={handleSaveClick}
-          className="flex-1 bg-primary-light text-xl text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
+          className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl border-b-4 border-primary-light active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
         >
           Save Entry
         </button>
         <button
           onClick={handleViewHistory}
-          className="flex-1 bg-primary-light text-xl text-highlight font-bold py-4 rounded-2xl shadow-lg hover:bg-primary-base transition-all duration-200"
+          className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl border-b-4 border-primary-light active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
         >
           See History
         </button>
@@ -408,58 +309,60 @@ const Grapes = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-4 max-w-sm w-full shadow-2xl">
+          <div className="bg-surface rounded-2xl p-4 max-w-sm w-full shadow-2xl">
             {isFullyFilled ? (
               <>
-                <h2 className="text-2xl font-bold text-dark mb-2">
+                <h2 className="text-2xl font-bold text-ink mb-2">
                   All 6 activities filled! ✓
                 </h2>
-                <p className="text-gray-600 font-semibold text-lg">
+                <p className="text-muted font-semibold text-lg">
                   Have you completed all of the activities?
                 </p>
-                <p className="text-red-600 mb-6 text-xs font-medium">
-                  ⚠️ Warning: Entries cannot be modified after submission.
+                <p className="text-muted mb-6 text-xs font-medium">
+                  Heads up — entries can't be edited once saved.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
                       setShowSaveModal(false);
                     }}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 dark:bg-surface-2 text-dark dark:text-ink text-lg font-bold py-3 rounded-lg border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(true)}
-                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-light text-highlight text-lg font-bold py-3 rounded-lg border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75 disabled:opacity-60 disabled:active:translate-y-0 disabled:active:border-b-4"
                   >
-                    Done ✓
+                    {isSaving ? "Saving..." : "Done ✓"}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold text-dark mb-2">
+                <h2 className="text-2xl font-bold text-ink mb-2">
                   Confirm Partial Entry?
                 </h2>
-                <p className="text-gray-600  mb-2 text-lg font-semibold">
+                <p className="text-muted  mb-2 text-lg font-semibold">
                   You haven't filled in all 6 GRAPES activities. Are you sure you want to save this as finished for today?
                 </p>
-                <p className="text-red-600 mb-6 text-xs font-medium">
-                  ⚠️ Warning: Entries cannot be modified after submission.
+                <p className="text-muted mb-6 text-xs font-medium">
+                  Heads up — entries can't be edited once saved.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 dark:bg-surface-2 text-dark dark:text-ink text-lg font-bold py-3 rounded-lg border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(false)}
-                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-yellow-500 text-dark text-lg font-bold py-3 rounded-lg border-b-4 border-yellow-700 active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75 disabled:opacity-60 disabled:active:translate-y-0 disabled:active:border-b-4"
                   >
-                    Save Partial
+                    {isSaving ? "Saving..." : "Save Partial"}
                   </button>
                 </div>
               </>
@@ -474,12 +377,12 @@ const Grapes = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-dark">Entry History</h2>
+              <h2 className="text-2xl font-bold text-ink">Entry History</h2>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted hover:text-ink"
               >
                 <svg
                   className="w-6 h-6"
@@ -499,10 +402,10 @@ const Grapes = () => {
 
             {loadingHistory ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">Loading history...</p>
+                <p className="text-muted">Loading history...</p>
               </div>
             ) : historyEntries.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-muted text-center py-8">
                 No history entries yet. Start tracking your GRAPES activities!
               </p>
             ) : (
@@ -515,22 +418,10 @@ const Grapes = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-dark">
-                          {new Date(entry.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
+                        <div className="font-bold text-ink">
+                          {formatFriendlyDateTime(entry.date)}
                         </div>
-                        <div className="text-md font-medium text-dark">
-                          {new Date(entry.date).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            second: "2-digit",
-                          })}
-                        </div>
-                        <div className="text-sm font-medium text-gray-600 mt-1">
+                        <div className="text-sm font-medium text-muted mt-1">
                           {[
                             entry.gentle,
                             entry.recreation,
@@ -548,7 +439,7 @@ const Grapes = () => {
                             ✓ Completed
                           </span>
                         ) : (
-                          <span className="bg-gray-300 text-gray-700 text-sm px-2 py-1 rounded-full">
+                          <span className="bg-gray-300 dark:bg-ink/15 text-gray-700 dark:text-ink text-sm px-2 py-1 rounded-full">
                             Partial
                           </span>
                         )}
@@ -568,22 +459,14 @@ const Grapes = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-dark">
-                {new Date(selectedHistoryEntry.date).toLocaleDateString(
-                  "en-US",
-                  {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}
+              <h2 className="text-xl font-bold text-ink">
+                {formatFriendlyDateTime(selectedHistoryEntry.date)}
               </h2>
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted hover:text-ink"
               >
                 <svg
                   className="w-6 h-6"
@@ -618,15 +501,15 @@ const Grapes = () => {
                   selectedHistoryEntry[key as keyof Omit<GrapesEntry, "_id" | "date" | "completed">];
                 return (
                   <div key={key}>
-                    <div className="font-bold text-dark mb-2">
+                    <div className="font-bold text-ink mb-2">
                       {label}
                     </div>
                     {activity && activity.trim() !== "" ? (
-                      <div className={`${color}/20 px-3 py-2 rounded-lg text-sm`}>
+                      <div className={`${color}/20 px-3 py-2 rounded-lg text-sm text-ink`}>
                         {activity}
                       </div>
                     ) : (
-                      <p className="text-gray-400 text-sm italic">
+                      <p className="text-muted text-sm italic">
                         No activity recorded
                       </p>
                     )}
@@ -635,7 +518,7 @@ const Grapes = () => {
               })}
             </div>
 
-            <div className="mt-6 pt-4 border-t">
+            <div className="mt-6 pt-4 border-t border-line">
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
                 className="w-full text-lg bg-primary-light text-highlight font-bold py-3 rounded-lg hover:bg-primary-base transition-colors"

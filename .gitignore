@@ -6,3 +6,5 @@ server/.env.*local
 frontend/.env
 frontend/.env.local
 frontend/.env.*local
+.claude/
+mockups/

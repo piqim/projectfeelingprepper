@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import config from "../../config";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
+import { useTheme, type Theme } from "../../hooks/useTheme";
+import { getStoredUserId } from "../../utils/userId";
+import { authHeaders, clearAuthStorage } from "../../utils/auth";
 
 interface User {
   _id: string;
@@ -14,6 +19,7 @@ interface User {
 const Settings = () => {
   const navigate = useNavigate();
   const API_URL = config.API_URL;
+  const { theme, setTheme } = useTheme();
 
   // User data
   const [user, setUser] = useState<User | null>(null);
@@ -36,10 +42,8 @@ const Settings = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Get userId from localStorage
-  const getUserId = () => {
-    return localStorage.getItem("userId");
-  };
+  const { message, type, visible, showToast } = useToast();
+
 
   useEffect(() => {
     fetchUserData();
@@ -47,14 +51,14 @@ const Settings = () => {
 
   // Fetch user data
   const fetchUserData = async () => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
       navigate("/user/login");
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/users/${userId}`);
+      const response = await fetch(`${API_URL}/users/${userId}`, { headers: authHeaders() });
       if (response.ok) {
         const data = await response.json();
         setUser(data);
@@ -91,7 +95,7 @@ const Settings = () => {
     setError("");
     setSuccess("");
 
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     // Validation
@@ -112,10 +116,6 @@ const Settings = () => {
 
     // If changing password
     if (formData.newPassword) {
-      if (!formData.password) {
-        setError("Please enter your current password");
-        return;
-      }
       if (formData.newPassword.length < 6) {
         setError("New password must be at least 6 characters");
         return;
@@ -127,61 +127,44 @@ const Settings = () => {
     }
 
     try {
-      // First verify current password if changing password
+      // Handle password change separately via dedicated endpoint
       if (formData.newPassword) {
-        const loginResponse = await fetch(`${API_URL}/auth/login`, {
+        const pwResponse = await fetch(`${API_URL}/users/${userId}/change-password`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(),
           body: JSON.stringify({
-            email: user?.email,
-            password: formData.password,
+            currentPassword: formData.password,
+            newPassword: formData.newPassword,
           }),
         });
 
-        if (!loginResponse.ok) {
-          setError("Current password is incorrect");
+        if (!pwResponse.ok) {
+          const data = await pwResponse.json();
+          setError(data.error || "Failed to change password");
           return;
         }
       }
 
-      // Update user data
-      const updateData: any = {
-        username: formData.username,
-        email: formData.email,
-      };
-
-      // Include new password if changing
-      if (formData.newPassword) {
-        updateData.password = formData.newPassword;
-      }
-
+      // Update username / email via general PATCH
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(updateData),
+        headers: authHeaders(),
+        body: JSON.stringify({
+          username: formData.username,
+          email: formData.email,
+        }),
       });
 
       if (response.ok) {
-        setSuccess("Profile updated successfully!");
-        // Refresh user data
         await fetchUserData();
-        // Clear password fields
-        setFormData({
-          ...formData,
-          password: "",
-          newPassword: "",
-          confirmNewPassword: "",
-        });
-        setTimeout(() => {
-          setActiveModal(null);
-          setSuccess("");
-        }, 2000);
+        setFormData({ ...formData, password: "", newPassword: "", confirmNewPassword: "" });
+        showToast("Profile updated successfully!", "success");
+        setTimeout(() => setActiveModal(null), 2000);
       } else {
         const data = await response.json();
         setError(data.error || "Failed to update profile");
       }
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } catch {
       setError("An error occurred. Please try again.");
     }
   };
@@ -189,14 +172,14 @@ const Settings = () => {
   // Export data to CSV
   const handleDataExport = async () => {
     setIsExporting(true);
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     try {
       // Fetch all user data
       const [grapesResponse, cogtriResponse] = await Promise.all([
-        fetch(`${API_URL}/grapes/user/${userId}`),
-        fetch(`${API_URL}/cogtri/user/${userId}`),
+        fetch(`${API_URL}/grapes/user/${userId}`, { headers: authHeaders() }),
+        fetch(`${API_URL}/cogtri/user/${userId}`, { headers: authHeaders() }),
       ]);
 
       const grapesData = await grapesResponse.json();
@@ -234,11 +217,9 @@ const Settings = () => {
       link.click();
       document.body.removeChild(link);
 
-      setSuccess("Data exported successfully!");
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (error) {
-      console.error("Error exporting data:", error);
-      setError("Failed to export data");
+      showToast("Data exported successfully!", "success");
+    } catch {
+      showToast("Failed to export data. Please try again.", "error");
     } finally {
       setIsExporting(false);
     }
@@ -252,27 +233,25 @@ const Settings = () => {
     }
 
     setIsDeleting(true);
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) return;
 
     try {
       const response = await fetch(`${API_URL}/users/${userId}`, {
         method: "DELETE",
+        headers: authHeaders(),
       });
 
       if (response.ok) {
-        // Clear localStorage
-        localStorage.removeItem("userId");
-        // Show success message
-        alert("Your account and all data have been deleted.");
-        // Redirect to login
-        navigate("/user/login");
+        clearAuthStorage();
+        showToast("Your account and all data have been deleted.", "info");
+        setTimeout(() => navigate("/user/login"), 1500);
       } else {
-        setError("Failed to delete account");
+        const data = await response.json();
+        setError(data.error || "Failed to delete account");
         setIsDeleting(false);
       }
-    } catch (error) {
-      console.error("Error deleting account:", error);
+    } catch {
       setError("An error occurred. Please try again.");
       setIsDeleting(false);
     }
@@ -280,20 +259,24 @@ const Settings = () => {
 
   // Logout
   const handleLogout = () => {
-    localStorage.removeItem("userId");
+    clearAuthStorage();
     navigate("/user/login");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral flex items-center justify-center">
-        <p className="text-dark text-xl">Loading...</p>
+      <div className="min-h-dvh bg-neutral flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-primary-light border-t-transparent rounded-full animate-spin" />
+          <p className="text-ink text-sm">Loading...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral flex flex-col pb-20">
+    <div className="min-h-dvh bg-neutral flex flex-col pb-24">
+      <Toast message={message} type={type} visible={visible} />
       {/* Header */}
       <div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
@@ -302,7 +285,7 @@ const Settings = () => {
       </div>
 
       {/* User Info Card */}
-      <div className="bg-white p-4">
+      <div className="bg-surface p-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-gradient-to-br from-primary-base to-primary-light rounded-full flex items-center justify-center">
             <span className="text-2xl font-bold text-highlight">
@@ -310,12 +293,32 @@ const Settings = () => {
             </span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-dark">{user?.username}</h2>
-            <p className="text-sm text-gray-600">{user?.email}</p>
+            <h2 className="text-xl font-bold text-ink">{user?.username}</h2>
+            <p className="text-sm text-muted">{user?.email}</p>
             <p className="text-xs text-primary-light font-semibold mt-1">
               🔥 {user?.streak} day streak
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Appearance / Theme */}
+      <div className="px-6 mt-6">
+        <p className="text-sm font-bold text-ink mb-2">Appearance</p>
+        <div className="flex gap-1 bg-surface-2 rounded-xl p-1">
+          {(["light", "dark", "system"] as Theme[]).map((opt) => (
+            <button
+              key={opt}
+              onClick={() => setTheme(opt)}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold capitalize transition-colors ${
+                theme === opt
+                  ? "bg-primary-light text-highlight shadow-sm"
+                  : "text-muted hover:text-ink"
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -324,11 +327,11 @@ const Settings = () => {
         {/* Edit Profile */}
         <button
           onClick={() => setActiveModal("profile")}
-          className="bg-white shadow-lg rounded-xl p-4 text-left font-semibold text-dark hover:bg-gray-50 transition-colors flex items-center justify-between"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
         >
           <span>✏️ Edit Profile</span>
           <svg
-            className="w-5 h-5 text-gray-400"
+            className="w-5 h-5 text-muted"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -345,30 +348,42 @@ const Settings = () => {
         {/* Privacy Settings */}
         <button
           onClick={() => setActiveModal("privacy")}
-          className="bg-white shadow-lg rounded-xl p-4 text-left font-semibold text-dark hover:bg-gray-50 transition-colors flex items-center justify-between"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
         >
           <span>🔒 Privacy & Data</span>
-          <svg
-            className="w-5 h-5 text-gray-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5l7 7-7 7"
-            />
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
+
+        {/* Analytics Link */}
+        <Link
+          to="/analytics"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
+        >
+          <span>📊 Analytics</span>
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
+        {/* Learn More Link */}
+        <Link
+          to="/learnmore"
+          className="bg-surface shadow-lg rounded-xl p-4 text-left font-semibold text-ink hover:bg-surface-2 transition-colors flex items-center justify-between"
+        >
+          <span>📖 Learn More</span>
+          <svg className="w-5 h-5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
       </div>
 
       {/* Logout Button */}
       <div className="m-6">
         <button
           onClick={handleLogout}
-          className="w-full bg-red-400 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-600 transition-colors"
+          className="w-full bg-red-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-red-600 transition-colors"
         >
           Log Out
         </button>
@@ -377,7 +392,7 @@ const Settings = () => {
       {/* Modals */}
       {activeModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
             {/* Close button */}
             <button
               onClick={() => {
@@ -385,8 +400,9 @@ const Settings = () => {
                 setError("");
                 setSuccess("");
                 setDeleteConfirmText("");
+                setDeletePassword("");
               }}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+              className="absolute top-4 right-4 text-muted hover:text-ink text-2xl font-bold"
             >
               ×
             </button>
@@ -394,7 +410,7 @@ const Settings = () => {
             {/* Edit Profile Modal */}
             {activeModal === "profile" && (
               <form onSubmit={handleSaveProfile} className="flex flex-col gap-4 mt-2">
-                <h2 className="text-2xl font-bold text-dark border-b-2 border-gray-200 pb-3">
+                <h2 className="text-2xl font-bold text-ink border-b-2 border-line pb-3">
                   ✏️ Edit Profile
                 </h2>
 
@@ -411,7 +427,7 @@ const Settings = () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-semibold text-dark mb-2">
+                  <label className="block text-sm font-semibold text-ink mb-2">
                     Username
                   </label>
                   <input
@@ -419,12 +435,12 @@ const Settings = () => {
                     name="username"
                     value={formData.username}
                     onChange={handleChange}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                    className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-dark mb-2">
+                  <label className="block text-sm font-semibold text-ink mb-2">
                     Email
                   </label>
                   <input
@@ -432,18 +448,18 @@ const Settings = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                    className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                   />
                 </div>
 
-                <div className="border-t-2 border-gray-200 pt-4 mt-2">
-                  <h3 className="text-lg font-bold text-dark mb-3">
+                <div className="border-t-2 border-line pt-4 mt-2">
+                  <h3 className="text-lg font-bold text-ink mb-3">
                     Change Password
                   </h3>
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         Current Password
                       </label>
                       <input
@@ -452,12 +468,12 @@ const Settings = () => {
                         value={formData.password}
                         onChange={handleChange}
                         placeholder="Enter current password"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         New Password
                       </label>
                       <input
@@ -466,12 +482,12 @@ const Settings = () => {
                         value={formData.newPassword}
                         onChange={handleChange}
                         placeholder="At least 6 characters"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-dark mb-2">
+                      <label className="block text-sm font-semibold text-ink mb-2">
                         Confirm New Password
                       </label>
                       <input
@@ -480,7 +496,7 @@ const Settings = () => {
                         value={formData.confirmNewPassword}
                         onChange={handleChange}
                         placeholder="Re-enter new password"
-                        className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
+                        className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-primary-light focus:outline-none"
                       />
                     </div>
                   </div>
@@ -498,7 +514,7 @@ const Settings = () => {
             {/* Privacy Modal */}
             {activeModal === "privacy" && (
               <div className="flex flex-col gap-6 mt-2">
-                <h2 className="text-2xl font-bold text-dark border-b-2 border-gray-200 pb-3">
+                <h2 className="text-2xl font-bold text-ink border-b-2 border-line pb-3">
                   🔒 Privacy & Data
                 </h2>
 
@@ -515,29 +531,29 @@ const Settings = () => {
                 )}
 
                 {/* Data Export */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                  <h3 className="font-bold text-dark mb-2">📊 Export Your Data</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="bg-surface-2 border-2 border-line rounded-xl p-4">
+                  <h3 className="font-bold text-ink mb-2">📊 Export Your Data</h3>
+                  <p className="text-sm text-muted mb-4">
                     Download all your GRAPES and CogTri entries as a CSV file.
                   </p>
                   <button
                     onClick={handleDataExport}
                     disabled={isExporting}
-                    className="w-full bg-blue-500 text-white font-bold py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    className="w-full bg-primary-base text-highlight font-bold py-3 rounded-lg hover:bg-dark transition-colors disabled:opacity-50"
                   >
                     {isExporting ? "Exporting..." : "📥 Download Data"}
                   </button>
                 </div>
 
                 {/* Delete Account */}
-                <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4">
-                  <h3 className="font-bold text-dark mb-2">🗑️ Delete Account</h3>
-                  <p className="text-sm text-gray-600 mb-4">
+                <div className="bg-red-50 dark:bg-red-500/10 border-2 border-red-200 dark:border-red-500/30 rounded-xl p-4">
+                  <h3 className="font-bold text-ink mb-2">🗑️ Delete Account</h3>
+                  <p className="text-sm text-muted mb-4">
                     Permanently delete your account and all data. This action cannot be undone.
                   </p>
 
                   <div className="mb-4">
-                    <label className="block text-sm font-semibold text-dark mb-2">
+                    <label className="block text-sm font-semibold text-ink mb-2">
                       Type "DELETE" to confirm
                     </label>
                     <input
@@ -548,7 +564,7 @@ const Settings = () => {
                         setError("");
                       }}
                       placeholder="DELETE"
-                      className="w-full border-2 border-red-300 rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
+                      className="w-full border-2 border-red-300 bg-surface-2 text-ink rounded-lg px-4 py-3 focus:border-red-500 focus:outline-none"
                     />
                   </div>
 

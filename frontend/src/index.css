@@ -1,7 +1,11 @@
 /* IMPORT TAILWIND BASE FILE */ @import "tailwindcss";
 
+/* Enable class-based dark mode: toggled by adding `.dark` on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* App main color palette */
 @theme {
+  /* Brand colors — constant across light & dark */
   --color-primary-base: #0281A7;
   --color-primary-light: #02AFB9;
   --color-secondary: #D4A7E1;
@@ -11,17 +15,48 @@
   --color-dark: #222089;
   --color-neutral: #F6F0E5;
   --color-highlight: #FDFDFD;
+
+  /* Semantic tokens — these flip in dark mode (see .dark below).
+     canvas = page background, surface = cards/modals,
+     ink = primary text, muted = secondary text, line = borders/dividers */
+  --color-canvas: #F6F0E5;
+  --color-surface: #FDFDFD;
+  --color-surface-2: #EFE7D6;
+  --color-ink: #222089;
+  --color-muted: #6B7280;
+  --color-line: rgba(34, 32, 137, 0.12);
+}
+
+/* Dark theme — override the semantic tokens (brand colors stay the same).
+   Also remaps `neutral` so existing bg-neutral page backgrounds flip for free. */
+.dark {
+  --color-canvas: #15151f;
+  --color-surface: #232336;
+  --color-surface-2: #2c2c42;
+  --color-ink: #D7D3C8;
+  --color-muted: #9D9BB8;
+  --color-line: rgba(255, 255, 255, 0.14);
+  --color-neutral: #15151f;
+
+  /* Brand turquoise reads as a harsh neon cyan on a dark UI, so dim it for
+     dark mode. Cascades to every bg-/text-primary-light & -base utility. */
+  --color-primary-light: #1C8B94;
+  --color-primary-base: #156F79;
 }
 
 /* Custom root styles */
 :root {
   font-family: "Plus Jakarta Sans", sans-serif;
   color-scheme: light;
-  background-color: #FDFDFD; /* Use a light gray instead of dark for app */
+  background-color: var(--color-canvas);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 .welcome {
@@ -30,5 +65,64 @@
 
 .montserrat-alternates {
   font-family: "Montserrat Alternates", sans-serif;
+}
 
+/* Pet / character animations */
+@keyframes fp-bob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes fp-tailwag {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(10deg); }
+  75%      { transform: rotate(-10deg); }
+}
+
+@keyframes fp-blink {
+  0%, 85%, 100% { transform: scaleY(1); }
+  92%           { transform: scaleY(0.08); }
+  96%           { transform: scaleY(1); }
+}
+
+.fp-bob      { animation: fp-bob 3s ease-in-out infinite; }
+.fp-tailwag  { animation: fp-tailwag 2s ease-in-out infinite; transform-origin: 85px 35px; }
+.fp-blink    {
+  animation: fp-blink 5s ease-in-out infinite;
+  transform-origin: 45px 30px;
+}
+
+/* Shadow stays fixed on the ground; scales smaller when the pet is at peak height
+   to simulate the shadow shrinking as the source moves further from the surface. */
+@keyframes fp-shadow {
+  0%, 100% { transform: scaleX(1);    opacity: 1;   }
+  50%       { transform: scaleX(0.6); opacity: 0.5; }
+}
+.fp-shadow { animation: fp-shadow 3s ease-in-out infinite; }
+
+/* Unified card depth — soft, brand-tinted shadow for visual consistency */
+.fp-card { box-shadow: 0 4px 16px rgba(34, 32, 137, 0.07); }
+.dark .fp-card { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); }
+
+/* Page transition — fires on every route change (keyed Outlet wrapper) */
+@keyframes fp-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fp-page { animation: fp-page-in 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+
+/* Soft drifting clouds for the pet scene */
+@keyframes fp-drift {
+  0%   { transform: translateX(0); }
+  50%  { transform: translateX(10px); }
+  100% { transform: translateX(0); }
+}
+.fp-drift      { animation: fp-drift 9s ease-in-out infinite; }
+.fp-drift-slow { animation: fp-drift 14s ease-in-out infinite; }
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .fp-page, .fp-bob, .fp-tailwag, .fp-blink, .fp-drift, .fp-drift-slow, .fp-shadow {
+    animation: none;
+  }
 }

@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import config from "../../config";
 import instructionsImg from "../../assets/instructions.jpg";
+import Toast from "../Toast";
+import { useToast } from "../../hooks/useToast";
+import { fireConfetti } from "../../hooks/useConfetti";
+import { formatFriendlyDateTime } from "../../utils/date";
+import { getStoredUserId } from "../../utils/userId";
+import { authHeaders } from "../../utils/auth";
 
 interface CogTriEntry {
   _id?: string;
@@ -12,11 +18,17 @@ interface CogTriEntry {
   complete: boolean;
 }
 
+/**
+ * Cogtri — Cognitive Triangle entry tool.
+ *
+ * Each entry captures the four CBT fields (situation, thoughts, feelings, behavior)
+ * via full-screen tap-to-edit modals rather than inline inputs, keeping the main
+ * view uncluttered. Entries are immutable after saving, and only one entry per
+ * UTC day is allowed — a duplicate warning interrupts the save flow if needed.
+ */
 const Cogtri = () => {
-  // API URL from config
   const API_URL = config.API_URL;
 
-  // State for current entry
   const [entry, setEntry] = useState({
     situation: "",
     thoughts: "",
@@ -24,44 +36,43 @@ const Cogtri = () => {
     behavior: "",
   });
 
-  // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [modalField, setModalField] = useState<
     "thoughts" | "feelings" | "behavior" | "situation" | null
   >(null);
+  // Holds the in-progress edit value; only committed to `entry` on Save, not on every keystroke.
   const [tempValue, setTempValue] = useState("");
 
-  // Confirmation and History modals
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [selectedHistoryEntry, setSelectedHistoryEntry] =
     useState<CogTriEntry | null>(null);
   const [isFullyFilled, setIsFullyFilled] = useState(false);
 
-  // Instructions toggle
-  const [instructionsOpen, setInstructionsOpen] = useState(true);
+  // Instructions / About behave as an accordion — exactly one is always open,
+  // so the page never collapses into a big empty gap. Choice is persisted.
+  const [openSection, setOpenSection] = useState<"instructions" | "about">(
+    () => (localStorage.getItem("cogtri-section") === "about" ? "about" : "instructions")
+  );
 
-  // About toggle
-  const [aboutOpen, setAboutOpen] = useState(false);
-
-  // History data from MongoDB
-  const [historyEntries, setHistoryEntries] = useState<CogTriEntry[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
-
-  // Get userId from localStorage
-  const getUserId = () => {
-    return localStorage.getItem("userId");
+  const selectSection = (section: "instructions" | "about") => {
+    setOpenSection(section);
+    localStorage.setItem("cogtri-section", section);
   };
 
-  useEffect(() => {
+  const [historyEntries, setHistoryEntries] = useState<CogTriEntry[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-    // Fetch history on component mount
+  const { message, type, visible, showToast } = useToast();
+
+  useEffect(() => {
     fetchHistory();
   }, []);
 
-  // Fetch user's CogTri history from MongoDB
   const fetchHistory = async () => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
       console.error("No userId found");
       return;
@@ -69,24 +80,20 @@ const Cogtri = () => {
 
     setLoadingHistory(true);
     try {
-      const response = await fetch(`${API_URL}/cogtri/user/${userId}`);
+      const response = await fetch(`${API_URL}/cogtri/user/${userId}`, { headers: authHeaders() });
 
       if (response.ok) {
         const data = await response.json();
         setHistoryEntries(data);
-        console.log("Fetched CogTri history:", data);
       } else {
-        console.error("Failed to fetch history:", response.status);
         setHistoryEntries([]);
       }
-    } catch (error) {
-      console.error("Error fetching history:", error);
+    } catch {
     } finally {
       setLoadingHistory(false);
     }
   };
 
-  // Field labels for display
   const fieldLabels = {
     thoughts: "Thoughts",
     feelings: "Feelings",
@@ -94,7 +101,6 @@ const Cogtri = () => {
     situation: "Situation",
   };
 
-  // Handlers
   const handleOpenModal = (
     field: "thoughts" | "feelings" | "behavior" | "situation"
   ) => {
@@ -116,34 +122,58 @@ const Cogtri = () => {
     setTempValue("");
   };
 
+  /**
+   * Opens the save confirmation modal (or a duplicate-entry warning if the
+   * user has already submitted an entry today).
+   *
+   * The duplicate check compares UTC dates to match the server's perspective —
+   * otherwise an entry at 11 PM local might be flagged against a next-UTC-day
+   * entry from the server's side.
+   */
   const handleSaveClick = () => {
-    // Check if at least one field is filled
     const hasContent = Object.values(entry).some((val) => val.trim() !== "");
     if (!hasContent) {
-      alert("Please fill in at least one field before saving.");
+      showToast("Please fill in at least one field before saving.", "error");
       return;
     }
 
-    // Check if all 4 fields are filled
     const allFieldsFilled = Object.values(entry).every((val) => val.trim() !== "");
     setIsFullyFilled(allFieldsFilled);
 
-    // Always show modal for confirmation
+    const today = new Date();
+    const hasEntryToday = historyEntries.some((e) => {
+      const d = new Date(e.date);
+      return (
+        d.getUTCFullYear() === today.getUTCFullYear() &&
+        d.getUTCMonth() === today.getUTCMonth() &&
+        d.getUTCDate() === today.getUTCDate()
+      );
+    });
+
+    if (hasEntryToday) {
+      setShowDuplicateWarning(true);
+      return;
+    }
+
     setShowSaveModal(true);
   };
 
   const handleConfirmSave = async (complete: boolean) => {
-    const userId = getUserId();
+    const userId = getStoredUserId();
     if (!userId) {
-      alert("You must be logged in to save entries.");
+      showToast("You must be logged in to save entries.", "error");
       setShowSaveModal(false);
       return;
     }
 
-    // Prepare data for MongoDB
+    setIsSaving(true);
+
     const dataToSave = {
-      userId,
       date: new Date().toISOString(),
+      // localDate is ISO date-only in the user's local timezone (YYYY-MM-DD).
+      // The backend uses this — not `date` — to determine "today's" entry so
+      // a save at 11 PM local time isn't counted as the next UTC day.
+      localDate: new Date().toLocaleDateString("en-CA"),
       situation: entry.situation,
       thoughts: entry.thoughts,
       feelings: entry.feelings,
@@ -151,40 +181,35 @@ const Cogtri = () => {
       complete,
     };
 
-    console.log("Saving to MongoDB:", dataToSave);
-
     try {
       const response = await fetch(`${API_URL}/cogtri`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(dataToSave),
       });
 
       if (response.ok) {
-        const result = await response.json();
-        console.log("Saved successfully:", result);
-
-        // Clear form after save
-        setEntry({
-          situation: "",
-          thoughts: "",
-          feelings: "",
-          behavior: "",
-        });
-
-        // Refresh history to show new entry
+        const data = await response.json();
+        setEntry({ situation: "", thoughts: "", feelings: "", behavior: "" });
         await fetchHistory();
-
         setShowSaveModal(false);
-        alert("Entry saved successfully!");
+        showToast("Saved — nice work today 💜", "success");
+        fireConfetti("small");
+        if (data.leveledUp) {
+          showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
+          fireConfetti("big");
+        }
+        if (data.streakUpdated === false) {
+          showToast("Entry saved, but your streak couldn't be updated right now.", "info");
+        }
       } else {
         const error = await response.json();
-        console.error("Save failed:", error);
-        alert(`Failed to save entry: ${error.error || "Unknown error"}`);
+        showToast(`Failed to save: ${error.error || "Unknown error"}`, "error");
       }
-    } catch (error) {
-      console.error("Error saving:", error);
-      alert("Error saving entry. Please check your connection.");
+    } catch {
+      showToast("Error saving entry. Please check your connection.", "error");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -208,10 +233,16 @@ const Cogtri = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary-base flex flex-col">
+    <div className="min-h-dvh bg-neutral flex flex-col pb-24">
+      <Toast message={message} type={type} visible={visible} />
+      {/* Header */}
+      <div className="bg-primary-light p-4 text-center">
+        <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
+          CogTri
+        </h1>
+      </div>
       {/* CogTri Section */}
-      <div className="px-4 pt-4 pb-10">
-        <h1 className="text-highlight text-3xl font-bold mb-4 mx-6">CogTri🔺</h1>
+      <div className="bg-primary-base px-4 pt-4 pb-10">
 
         {/* Triangle Container */}
         <div className="relative w-full max-w-md mx-auto aspect-[1.25] min-[410px]:aspect-[1.5]" >
@@ -290,13 +321,13 @@ const Cogtri = () => {
         <div className="px-6 mt-4 flex gap-4 max-w-md mx-auto">
           <button
             onClick={handleSaveClick}
-            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
+            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
           >
             Save Entry
           </button>
           <button
             onClick={handleViewHistory}
-            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl shadow-lg hover:opacity-80 transition-opacity"
+            className="flex-1 bg-primary-light text-highlight text-xl font-bold py-4 rounded-2xl border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
           >
             See History
           </button>
@@ -304,15 +335,15 @@ const Cogtri = () => {
       </div>
 
       {/* Instructions Section */}
-      <div className="px-6 py-4 bg-highlight">
+      <div className="px-6 py-4 bg-highlight dark:bg-surface">
         {/* Clickable Header */}
         <button
-          onClick={() => setInstructionsOpen(!instructionsOpen)}
+          onClick={() => selectSection("instructions")}
           className="w-full flex items-center justify-between text-left"
         >
-          <h2 className="text-dark text-2xl font-bold">Instructions</h2>
+          <h2 className="text-ink text-2xl font-bold">Instructions</h2>
           <svg
-            className={`w-6 h-6 text-dark transition-transform duration-300 ${instructionsOpen ? "rotate-180" : ""
+            className={`w-6 h-6 text-ink transition-transform duration-300 ${openSection === "instructions" ? "rotate-180" : ""
               }`}
             fill="none"
             stroke="currentColor"
@@ -329,13 +360,13 @@ const Cogtri = () => {
 
         {/* Collapsible Content */}
         <div
-          className={`overflow-hidden transition-all duration-300 ${instructionsOpen ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"
+          className={`overflow-hidden transition-all duration-300 ${openSection === "instructions" ? "max-h-96 opacity-100 mt-4" : "max-h-0 opacity-0"
             }`}
         >
           <div className="flex gap-6">
             {/* Left side - Text */}
             <div className="flex-1 font-semibold text-sm">
-              <ol className="space-y-3 text-dark">
+              <ol className="space-y-3 text-ink">
                 <li className="flex gap-3">
                   <span className="font-bold text-primary-light">1.</span>
                   <span>
@@ -368,12 +399,12 @@ const Cogtri = () => {
       <div className="px-6 py-4 bg-primary-base">
         {/* Clickable Header */}
         <button
-          onClick={() => setAboutOpen(!aboutOpen)}
+          onClick={() => selectSection("about")}
           className="w-full flex items-center justify-between text-left"
         >
           <h2 className="text-highlight text-2xl font-bold">About</h2>
           <svg
-            className={`w-6 h-6 text-highlight transition-transform duration-300 ${aboutOpen ? "rotate-180" : ""
+            className={`w-6 h-6 text-highlight transition-transform duration-300 ${openSection === "about" ? "rotate-180" : ""
               }`}
             fill="none"
             stroke="currentColor"
@@ -390,12 +421,12 @@ const Cogtri = () => {
 
         {/* Collapsible Content */}
         <div
-          className={`overflow-hidden transition-all duration-300 ${aboutOpen ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"
+          className={`overflow-hidden transition-all duration-300 ${openSection === "about" ? "max-h-[1000px] opacity-100 mt-4" : "max-h-0 opacity-0"
             }`}
         >
           {/* Main explanation box */}
-          <div className="bg-white rounded-xl rounded-b-none pt-4">
-            <p className="text-dark font-bold text-md mb-4 px-4">
+          <div className="bg-surface rounded-xl rounded-b-none pt-4">
+            <p className="text-ink font-bold text-md mb-4 px-4">
               In any situation, we have...
             </p>
 
@@ -443,7 +474,7 @@ const Cogtri = () => {
             <div className="space-y-3">
               {/* Example 1 - Negative */}
               <div className="space-y-2">
-                <div className="bg-neutral/90 rounded-lg p-2 flex items-center gap-2">
+                <div className="bg-[#F6F0E5]/90 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">😞</span>
                   <p className="text-sm text-dark italic">
                     "I never do well in this class, why even try?"
@@ -465,7 +496,7 @@ const Cogtri = () => {
 
               {/* Example 2 - Positive */}
               <div className="space-y-2">
-                <div className="bg-neutral/90 rounded-lg p-2 flex items-center gap-2">
+                <div className="bg-[#F6F0E5]/90 rounded-lg p-2 flex items-center gap-2">
                   <span className="text-2xl">🙂</span>
                   <p className="text-sm text-dark italic">
                     "I didn't do very well, so I'll study even harder and ace the
@@ -496,14 +527,14 @@ const Cogtri = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-dark">
+              <h2 className="text-2xl font-bold text-ink">
                 {fieldLabels[modalField]}
               </h2>
               <button
                 onClick={handleCancelField}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted hover:text-ink"
               >
                 <svg
                   className="w-6 h-6"
@@ -525,21 +556,56 @@ const Cogtri = () => {
               value={tempValue}
               onChange={(e) => setTempValue(e.target.value)}
               placeholder={`Enter your ${modalField}...`}
-              className="w-full border-2 border-gray-300 rounded-lg p-3 h-32 resize-none focus:border-primary-light focus:outline-none"
+              className="w-full border-2 border-line bg-surface-2 text-ink rounded-lg p-3 h-32 resize-none focus:border-primary-light focus:outline-none"
             />
 
             <div className="flex gap-3 mt-4">
               <button
                 onClick={handleCancelField}
-                className="flex-1 text-lg bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                className="flex-1 text-lg bg-gray-300 dark:bg-surface-2 text-gray-700 dark:text-ink font-semibold py-3 rounded-lg border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveField}
-                className="flex-1 text-lg bg-primary-light text-highlight font-semibold py-3 rounded-lg hover:bg-primary-base transition-colors"
+                className="flex-1 text-lg bg-primary-light text-highlight font-semibold py-3 rounded-lg border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Day Warning Modal */}
+      {showDuplicateWarning && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowDuplicateWarning(false)}
+        >
+          <div
+            className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-ink mb-2">Already saved today</h3>
+            <p className="text-sm text-muted mb-6">
+              You already have a CogTri entry for today. Save another one anyway?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateWarning(false)}
+                className="flex-1 py-2 rounded-xl bg-gray-200 dark:bg-surface-2 text-dark dark:text-ink font-semibold text-sm border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowDuplicateWarning(false);
+                  setShowSaveModal(true);
+                }}
+                className="flex-1 py-2 rounded-xl bg-primary-light text-highlight font-semibold text-sm border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
+              >
+                Save Anyway
               </button>
             </div>
           </div>
@@ -552,56 +618,58 @@ const Cogtri = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             {isFullyFilled ? (
               <>
-                <h2 className="text-xl font-bold text-dark mb-2">
+                <h2 className="text-xl font-bold text-ink mb-2">
                   All 4 fields filled! ✓
                 </h2>
-                <p className="text-gray-600 font-semibold text-lg mb-2">
+                <p className="text-muted font-semibold text-lg mb-2">
                   Have you finished reflecting on this situation?
                 </p>
-                <p className="text-red-600 mb-6 text-xs font-medium">
-                  ⚠️ Warning: Entries cannot be modified or edited after submission.
+                <p className="text-muted mb-6 text-xs font-medium">
+                  Heads up — entries can't be edited once saved.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 dark:bg-surface-2 text-dark dark:text-ink text-lg font-bold py-3 rounded-lg border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(true)}
-                    className="flex-1 bg-accent-3 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-accent-3/90 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-light text-highlight text-lg font-bold py-3 rounded-lg border-b-4 border-primary-base active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75 disabled:opacity-60 disabled:active:translate-y-0 disabled:active:border-b-4"
                   >
-                    Done ✓
+                    {isSaving ? "Saving..." : "Done ✓"}
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <h2 className="text-2xl font-bold text-dark mb-2">
+                <h2 className="text-2xl font-bold text-ink mb-2">
                   Confirm Partial Entry?
                 </h2>
-                <p className="text-gray-600 mb-2 text-lg">
+                <p className="text-muted mb-2 text-lg">
                   You haven't filled in all 4 fields. Are you sure this is it for now?
                 </p>
-                <p className="text-red-600 mb-6 text-xs font-medium">
-                  ⚠️ Warning: Entries cannot be modified or edited after submission.
+                <p className="text-muted mb-6 text-xs font-medium">
+                  Heads up — entries can't be edited once saved.
                 </p>
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowSaveModal(false)}
-                    className="flex-1 bg-red-400 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-gray-400 transition-colors"
+                    className="flex-1 bg-gray-200 dark:bg-surface-2 text-dark dark:text-ink text-lg font-bold py-3 rounded-lg border-b-4 border-gray-400 dark:border-line active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75"
                   >
                     Nope
                   </button>
                   <button
                     onClick={() => handleConfirmSave(false)}
-                    className="flex-1 bg-yellow-500 text-highlight text-2xl font-bold py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+                    disabled={isSaving}
+                    className="flex-1 bg-yellow-500 text-dark text-lg font-bold py-3 rounded-lg border-b-4 border-yellow-700 active:translate-y-1 active:border-b-0 transition-[transform,border-width] duration-75 disabled:opacity-60 disabled:active:translate-y-0 disabled:active:border-b-4"
                   >
-                    Save Partial
+                    {isSaving ? "Saving..." : "Save Partial"}
                   </button>
                 </div>
               </>
@@ -616,12 +684,12 @@ const Cogtri = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-dark">Entry History</h2>
+              <h2 className="text-2xl font-bold text-ink">Entry History</h2>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted hover:text-ink"
               >
                 <svg
                   className="w-6 h-6"
@@ -641,10 +709,10 @@ const Cogtri = () => {
 
             {loadingHistory ? (
               <div className="text-center py-8">
-                <p className="text-gray-500">Loading history...</p>
+                <p className="text-muted">Loading history...</p>
               </div>
             ) : historyEntries.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
+              <p className="text-muted text-center py-8">
                 No history entries yet. Start tracking your cognitive triangles!
               </p>
             ) : (
@@ -657,22 +725,10 @@ const Cogtri = () => {
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex-1">
-                        <div className="font-bold text-dark">
-                          {new Date(entry.date).toLocaleDateString("en-US", {
-                            weekday: "short",
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })}
-                      </div>
-                      <div className="text-md font-medium text-dark">
-                        {new Date(entry.date).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        })}
-                      </div>
-                        <div className="text-sm font-medium text-gray-600 mt-1">
+                        <div className="font-bold text-ink">
+                          {formatFriendlyDateTime(entry.date)}
+                        </div>
+                        <div className="text-sm font-medium text-muted mt-1">
                           Situation: {entry.situation.slice(0, 40)}
                           {entry.situation.length > 40 ? "..." : ""}
                         </div>
@@ -683,7 +739,7 @@ const Cogtri = () => {
                             ✓ Completed
                           </span>
                         ) : (
-                          <span className="bg-gray-300 text-gray-700 text-sm px-2 py-1 rounded-full">
+                          <span className="bg-gray-300 dark:bg-ink/15 text-gray-700 dark:text-ink text-sm px-2 py-1 rounded-full">
                             Partial
                           </span>
                         )}
@@ -703,21 +759,14 @@ const Cogtri = () => {
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={handleOverlayClick}
         >
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+          <div className="bg-surface rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto shadow-2xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-dark">
-                {new Date(selectedHistoryEntry.date).toLocaleDateString(
-                  "en-US",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  }
-                )}
+              <h2 className="text-xl font-bold text-ink">
+                {formatFriendlyDateTime(selectedHistoryEntry.date)}
               </h2>
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-muted hover:text-ink"
               >
                 <svg
                   className="w-6 h-6"
@@ -738,13 +787,13 @@ const Cogtri = () => {
             <div className="space-y-4">
               {/* Situation */}
               <div>
-                <div className="font-bold text-dark mb-2">Situation</div>
+                <div className="font-bold text-ink mb-2">Situation</div>
                 {selectedHistoryEntry.situation.trim() !== "" ? (
-                  <div className="bg-primary-base/20 px-3 py-2 rounded-lg text-sm">
+                  <div className="bg-primary-base/20 px-3 py-2 rounded-lg text-sm text-ink">
                     {selectedHistoryEntry.situation}
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-sm italic">
+                  <p className="text-muted text-sm italic">
                     No situation recorded
                   </p>
                 )}
@@ -752,13 +801,13 @@ const Cogtri = () => {
 
               {/* Thoughts */}
               <div>
-                <div className="font-bold text-dark mb-2">Thoughts</div>
+                <div className="font-bold text-ink mb-2">Thoughts</div>
                 {selectedHistoryEntry.thoughts.trim() !== "" ? (
-                  <div className="bg-accent-3/20 px-3 py-2 rounded-lg text-sm">
+                  <div className="bg-accent-3/20 px-3 py-2 rounded-lg text-sm text-ink">
                     {selectedHistoryEntry.thoughts}
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-sm italic">
+                  <p className="text-muted text-sm italic">
                     No thoughts recorded
                   </p>
                 )}
@@ -766,13 +815,13 @@ const Cogtri = () => {
 
               {/* Feelings */}
               <div>
-                <div className="font-bold text-dark mb-2">Feelings</div>
+                <div className="font-bold text-ink mb-2">Feelings</div>
                 {selectedHistoryEntry.feelings.trim() !== "" ? (
-                  <div className="bg-accent-1/20 px-3 py-2 rounded-lg text-sm">
+                  <div className="bg-accent-1/20 px-3 py-2 rounded-lg text-sm text-ink">
                     {selectedHistoryEntry.feelings}
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-sm italic">
+                  <p className="text-muted text-sm italic">
                     No feelings recorded
                   </p>
                 )}
@@ -780,20 +829,20 @@ const Cogtri = () => {
 
               {/* Behavior */}
               <div>
-                <div className="font-bold text-dark mb-2">Behavior</div>
+                <div className="font-bold text-ink mb-2">Behavior</div>
                 {selectedHistoryEntry.behavior.trim() !== "" ? (
-                  <div className="bg-accent-2/20 px-3 py-2 rounded-lg text-sm">
+                  <div className="bg-accent-2/20 px-3 py-2 rounded-lg text-sm text-ink">
                     {selectedHistoryEntry.behavior}
                   </div>
                 ) : (
-                  <p className="text-gray-400 text-sm italic">
+                  <p className="text-muted text-sm italic">
                     No behavior recorded
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="mt-6 pt-4 border-t">
+            <div className="mt-6 pt-4 border-t border-line">
               <button
                 onClick={() => setSelectedHistoryEntry(null)}
                 className="w-full text-lg bg-primary-light text-highlight font-bold py-3 rounded-lg hover:bg-primary-base transition-colors"

@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.tsx";
-import Footer from "./components/Footer.tsx";
+import BottomTabBar from "./components/BottomTabBar.tsx";
+import OfflineBanner from "./components/OfflineBanner.tsx";
+import { useNetworkStatus } from "./hooks/useNetworkStatus.ts";
 
 
 const App = () => {
   const [isLandscape, setIsLandscape] = useState(false);
+  const isOnline = useNetworkStatus();
+  const location = useLocation();
 
   useEffect(() => {
     const updateOrientation = () => {
@@ -49,20 +53,23 @@ const App = () => {
 
   if (isLandscape) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-6 text-center">
+      <div className="min-h-screen bg-canvas flex items-center justify-center px-6 text-center">
         <div>
-          <h1 className="text-2xl font-bold text-dark">Portrait Mode Required</h1>
-          <p className="mt-3 text-base text-gray-700">Please rotate your device to vertical to continue.</p>
+          <h1 className="text-2xl font-bold text-ink">Portrait Mode Required</h1>
+          <p className="mt-3 text-base text-muted">Please rotate your device to vertical to continue.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="w-max-[530px] h-max-[930px] mx-auto bg-white">
+    <div className="w-max-[530px] h-max-[930px] mx-auto bg-canvas">
       <Navbar />
-      <Outlet />
-      <Footer />
+      <OfflineBanner visible={!isOnline} />
+      <div key={location.pathname} className="fp-page">
+        <Outlet />
+      </div>
+      <BottomTabBar />
     </div>
   );
 };

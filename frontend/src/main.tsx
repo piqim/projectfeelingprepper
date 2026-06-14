@@ -6,6 +6,10 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 /* CSS IMPORT */
 import "./index.css";
 
+/* THEME — apply saved light/dark preference before first paint */
+import { applyTheme, getStoredTheme } from "./hooks/useTheme.ts";
+applyTheme(getStoredTheme());
+
 /* PAGE COMPONENTS IMPORT */
 import App from "./App";
 // BASE COMPONENTS
@@ -20,6 +24,7 @@ import Grapes from "./components/pages/Grapes.tsx";
 import Learnmore from "./components/pages/Learnmore.tsx";
 import Settings from "./components/pages/Settings.tsx";
 import Tipp from "./components/pages/Tipp.tsx";
+import Analytics from "./components/pages/Analytics.tsx";
 import Dev from "./components/pages/Dev.tsx";
 
 /* ROUTE(S) */
@@ -51,6 +56,10 @@ const router = createBrowserRouter([
       {
         path: "learnmore",
         children: [{ index: true, element: <Learnmore /> }],
+      },
+      {
+        path: "analytics",
+        children: [{ index: true, element: <Analytics /> }],
       },
     ],
   },

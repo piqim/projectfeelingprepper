@@ -1,7 +1,19 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import config from "../config";
+import Toast from "./Toast";
+import { useToast } from "../hooks/useToast";
+import { extractMongoId } from "../utils/userId";
 
+/**
+ * Register — new account creation form.
+ *
+ * Username is capped at 5 characters at the input level (slice) and also
+ * validated at submit (min 3). This is a product constraint — short usernames
+ * fit the compact pet-stats bar in the Home dashboard without overflowing.
+ *
+ * On success, stores the normalized userId and redirects to Home.
+ */
 const Register = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -10,51 +22,20 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     notifications: true,
-    theme: "light", // Locked to light for now
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const { message, type, visible, showToast } = useToast();
+
   const API_URL = config.API_URL;
-
-  const isValidObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
-
-  const extractMongoId = (value: unknown): string | null => {
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (isValidObjectId(trimmed)) return trimmed;
-
-      if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-        try {
-          const parsed = JSON.parse(trimmed);
-          if (
-            parsed &&
-            typeof parsed === "object" &&
-            "$oid" in parsed &&
-            typeof (parsed as { $oid?: unknown }).$oid === "string"
-          ) {
-            const oid = (parsed as { $oid: string }).$oid;
-            return isValidObjectId(oid) ? oid : null;
-          }
-        } catch {
-        }
-      }
-
-      return null;
-    }
-
-    if (value && typeof value === "object" && "$oid" in value) {
-      const oid = (value as { $oid?: unknown }).$oid;
-      if (typeof oid === "string" && isValidObjectId(oid)) return oid;
-    }
-
-    return null;
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
+    // Enforce the 5-char username cap at the input level so the field never
+    // shows characters that will be rejected on submit.
     const nextValue =
       name === "username" && type !== "checkbox" ? value.slice(0, 5) : value;
 
@@ -110,7 +91,6 @@ const Register = () => {
           email: formData.email,
           password: formData.password,
           notifications: formData.notifications,
-          theme: formData.theme,
         }),
       });
 
@@ -122,10 +102,6 @@ const Register = () => {
         return;
       }
 
-      // Registration successful!
-      console.log("Registration successful:", data);
-
-      // Store userId in localStorage
       const normalizedUserId = extractMongoId(data?.insertedId);
 
       if (!normalizedUserId) {
@@ -135,33 +111,68 @@ const Register = () => {
       }
 
       localStorage.setItem("userId", normalizedUserId);
+      localStorage.setItem("fp_token", data.token);
+      showToast("Account created successfully! Welcome to FeelingPrepper!", "success");
 
-      // Show success message
-      alert("Account created successfully! Welcome to FeelingPrepper 🎉");
-
-      // Redirect to home page
-      navigate("/");
-    } catch (error) {
-      console.error("Registration error:", error);
+      // Brief delay so user sees the toast before redirect
+      setTimeout(() => navigate("/"), 1500);
+    } catch {
       setError("An error occurred. Please try again.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="h-min-[930px] bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8">
+    <div className="min-h-dvh bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8">
+      <Toast message={message} type={type} visible={visible} />
       <div className="w-full max-w-md">
         {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-highlight montserrat-alternates mb-2">
+        <div className="text-center mb-4">
+          <h1 className="text-4xl font-bold text-highlight montserrat-alternates mb-1">
             FeelingPrepper
           </h1>
-          <p className="text-dark/80 text-lg">Start your mental health journey!</p>
+          <p className="text-dark/80 text-sm font-semibold">Meet your companions — pick one after you sign up!</p>
+        </div>
+
+        {/* Characters: Fish + Seal side by side */}
+        <div className="flex justify-center items-end gap-4 mb-4">
+          {/* Fish */}
+          <div className="fp-bob flex flex-col items-center">
+            <svg viewBox="0 0 120 100" className="w-24 h-24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 38 18 L 33 90 L 42 90 L 51 66 L 57 66 L 65 90 L 75 90 L 70 18 L 38 18" fill="var(--color-secondary)" stroke="#222089" strokeWidth="3" />
+              <ellipse cx="55" cy="35" rx="35" ry="25" fill="#FF7F50" stroke="#222089" strokeWidth="3" />
+              <path d="M 23 45 Q 44 48 55 38" stroke="#222089" strokeWidth="2" fill="none" />
+              <path className="fp-tailwag" d="M 85 35 Q 100 25, 95 35 Q 100 45, 85 35" fill="#FF7F50" stroke="#222089" strokeWidth="3" />
+              <circle cx="45" cy="30" r="8" fill="white" stroke="#222089" strokeWidth="2" />
+              <ellipse className="fp-blink" cx="45" cy="30" rx="4" ry="4" fill="#222089" />
+              <path d="M 65 30 Q 70 35, 65 40" stroke="#222089" strokeWidth="2" fill="none" />
+              <path d="M 70 32 Q 75 37, 70 42" stroke="#222089" strokeWidth="2" fill="none" />
+            </svg>
+            <span className="text-xs font-bold text-highlight mt-1">Fish</span>
+          </div>
+          {/* Seal */}
+          <div className="fp-bob flex flex-col items-center" style={{ animationDelay: "0.4s" }}>
+            <svg viewBox="0 0 120 100" className="w-24 h-24" xmlns="http://www.w3.org/2000/svg">
+              <ellipse cx="25" cy="78" rx="8" ry="9" transform="rotate(30 25 78)" fill="#9BB7BD" stroke="#5C6F75" strokeWidth="2" />
+              <ellipse cx="110" cy="80" rx="7" ry="9" transform="rotate(105 110 78)" fill="#9BB7BD" stroke="#5C6F75" strokeWidth="2" />
+              <ellipse cx="58" cy="88" rx="9" ry="7" fill="#9BB7BD" stroke="#5C6F75" strokeWidth="2" />
+              <path d="M 22 52 Q 18 91 49 88 Q 101 96 108 77 Q 112 51 74.5 50.5 Q 71.5 17.5 47.5 17.5 Q 23.5 17.5 22 52" fill="#9BB7BD" stroke="#5C6F75" strokeWidth="3" />
+              <circle cx="38" cy="40" r="5" fill="#222" />
+              <circle cx="58" cy="40" r="5" fill="#222" />
+              <circle cx="39.5" cy="38.5" r="2" fill="white" />
+              <circle cx="59.5" cy="38.5" r="2" fill="white" />
+              <ellipse cx="48" cy="52" rx="3" ry="2" fill="#444" />
+              <path d="M 41 55 Q 45 60 48 54 Q 51 60 55 55" stroke="#444" strokeWidth="2" fill="none" />
+              <path d="M 34 32 Q 38 30 42 32" stroke="#5C6F75" strokeWidth="2" fill="none" />
+              <path d="M 54 32 Q 58 30 62 32" stroke="#5C6F75" strokeWidth="2" fill="none" />
+            </svg>
+            <span className="text-xs font-bold text-highlight mt-1">Seal</span>
+          </div>
         </div>
 
         {/* Register Card */}
-        <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-2xl font-bold text-dark mb-6 text-center">
+        <div className="bg-surface rounded-2xl shadow-2xl p-8">
+          <h2 className="text-2xl font-bold text-ink mb-6 text-center">
             Create Account
           </h2>
 
@@ -178,7 +189,7 @@ const Register = () => {
             <div>
               <label
                 htmlFor="username"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Username <span className="text-red-500">*</span>
               </label>
@@ -191,7 +202,7 @@ const Register = () => {
                 placeholder="3-5 characters"
                 minLength={3}
                 maxLength={5}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                 disabled={loading}
               />
             </div>
@@ -200,7 +211,7 @@ const Register = () => {
             <div>
               <label
                 htmlFor="email"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Email Address <span className="text-red-500">*</span>
               </label>
@@ -211,7 +222,7 @@ const Register = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="you@example.com"
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                 disabled={loading}
               />
             </div>
@@ -220,7 +231,7 @@ const Register = () => {
             <div>
               <label
                 htmlFor="password"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Password <span className="text-red-500">*</span>
               </label>
@@ -232,13 +243,13 @@ const Register = () => {
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="At least 6 characters"
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 pr-12 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                   disabled={loading}
                 >
                   {showPassword ? (
@@ -285,7 +296,7 @@ const Register = () => {
             <div>
               <label
                 htmlFor="confirmPassword"
-                className="block text-sm font-semibold text-dark mb-2"
+                className="block text-sm font-semibold text-ink mb-2"
               >
                 Confirm Password <span className="text-red-500">*</span>
               </label>
@@ -297,13 +308,13 @@ const Register = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="Re-enter your password"
-                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:border-primary-light focus:outline-none transition-colors"
+                  className="w-full px-4 py-3 pr-12 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                   disabled={loading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink transition-colors"
                   disabled={loading}
                 >
                   {showConfirmPassword ? (
@@ -347,22 +358,22 @@ const Register = () => {
             </div>
 
             {/* Divider */}
-            <div className="border-t-2 border-gray-200 my-6"></div>
+            <div className="border-t-2 border-line my-6"></div>
 
             {/* Preferences Section */}
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-dark">Preferences</h3>
+              <h3 className="text-lg font-bold text-ink">Preferences</h3>
 
               {/* Notifications Toggle */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-surface-2 rounded-lg">
                 <div>
                   <label
                     htmlFor="notifications"
-                    className="text-sm font-semibold text-dark cursor-pointer"
+                    className="text-sm font-semibold text-ink cursor-pointer"
                   >
                     Enable Notifications
                   </label>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     Get reminders for daily check-ins
                   </p>
                 </div>
@@ -379,65 +390,6 @@ const Register = () => {
                   <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-light/30 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-light"></div>
                 </label>
               </div>
-
-              {/* Theme Selection (Coming Soon) */}
-              <div className="relative">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <label className="text-sm font-semibold text-dark">
-                    Theme Preference
-                  </label>
-                  <p className="text-xs text-gray-600 mt-1 mb-3">
-                    Choose your preferred theme
-                  </p>
-                  <div className="flex gap-3">
-                    <div className="flex items-center">
-                      <input
-                        type="radio"
-                        id="light"
-                        name="theme"
-                        value="light"
-                        checked={formData.theme === "light"}
-                        onChange={handleChange}
-                        className="w-4 h-4 text-primary-light focus:ring-primary-light"
-                        disabled
-                      />
-                      <label
-                        htmlFor="light"
-                        className="ml-2 text-sm text-gray-700"
-                      >
-                        ☀️ Light
-                      </label>
-                    </div>
-                    <div className="flex items-center opacity-50">
-                      <input
-                        type="radio"
-                        id="dark"
-                        name="theme"
-                        value="dark"
-                        checked={formData.theme === "dark"}
-                        onChange={handleChange}
-                        className="w-4 h-4 text-primary-light focus:ring-primary-light"
-                        disabled
-                      />
-                      <label
-                        htmlFor="dark"
-                        className="ml-2 text-sm text-gray-700"
-                      >
-                        🌙 Dark
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coming Soon Veil */}
-                <div className="absolute inset-0 bg-dark/60 flex items-center justify-center z-20 rounded-lg pointer-events-none select-none">
-                  <div className="text-center">
-                    <p className="text-white text-2xl font-bold montserrat-alternates tracking-wider">
-                      Coming Soon!
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Register Button */}
@@ -453,10 +405,10 @@ const Register = () => {
           {/* Divider */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-line"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">
+              <span className="px-4 bg-surface text-muted">
                 Already have an account?
               </span>
             </div>
