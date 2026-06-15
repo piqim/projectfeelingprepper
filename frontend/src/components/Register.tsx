@@ -149,7 +149,13 @@ const Register = () => {
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8">
+    <div
+      className="min-h-dvh bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)',
+      }}
+    >
       <Toast message={message} type={type} visible={visible} />
       <div className="w-full max-w-md">
         {/* Logo/Header */}
@@ -490,7 +496,7 @@ const Register = () => {
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-dark/60 text-sm">
-            © {new Date().getFullYear()} FeelingPrepper · Mental Health Tracker
+            © {new Date().getFullYear()} FeelingPrepper · All Rights Reserved
           </p>
         </div>
       </div>

@@ -91,7 +91,13 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-dvh bg-gradient-to-br from-primary-base to-primary-light flex items-center justify-center p-8">
+    <div
+      className="min-h-dvh bg-gradient-to-br from-primary-base to-primary-light flex items-center justify-center p-8"
+      style={{
+        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)',
+      }}
+    >
       <div className="w-full max-w-md">
         {/* Logo/Header */}
         <div className="text-center">
