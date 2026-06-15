@@ -8,6 +8,8 @@ import { formatFriendlyDateTime } from "../utils/date";
 import { extractMongoId, getStoredUserId } from "../utils/userId";
 import { authHeaders, clearAuthStorage } from "../utils/auth";
 import { LEVEL_THRESHOLDS, MAX_LEVEL, isSameUTCDay, getDerivedPetStatus } from "../utils/pet";
+import { hapticLight, hapticHeavy } from "../utils/haptics";
+import { setupDailyReminder, syncStreakProtection } from "../utils/notifications";
 import PetCharacter from "./pet/PetCharacter";
 import PetPreview from "./pet/PetPreview";
 import Toast from "./Toast";
@@ -97,6 +99,15 @@ const Home = () => {
   useEffect(() => {
     return () => { calendarControllerRef.current?.abort(); };
   }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const grapesIsToday = latestGrapes?.date ? isSameUTCDay(new Date(latestGrapes.date), new Date()) : false;
+    const cogtriIsToday = latestCogTri?.date ? isSameUTCDay(new Date(latestCogTri.date), new Date()) : false;
+    const completedToday = (grapesIsToday && latestGrapes?.completed === true) || (cogtriIsToday && latestCogTri?.complete === true);
+    void setupDailyReminder();
+    void syncStreakProtection(completedToday);
+  }, [loading, latestGrapes, latestCogTri]);
 
   /** Returns true when the user has an actual pet type set (non-empty string). */
   const hasPetType = (type?: string | null) => {
@@ -271,6 +282,7 @@ const Home = () => {
     const userId = getStoredUserId();
     if (!userId || feedAnim === "feeding") return;
 
+    hapticLight();
     setFeedAnim("feeding");
     try {
       const response = await fetch(`${API_URL}/users/${userId}/pet-feed`, {
@@ -297,6 +309,7 @@ const Home = () => {
       setFeedAnim("done");
 
       if (data.leveledUp) {
+        hapticHeavy();
         showToast(`Your pet leveled up to Lv. ${data.newLevel}!`, "success");
         fireConfetti("big");
       }

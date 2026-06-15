@@ -6,6 +6,8 @@ import { fireConfetti } from "../../hooks/useConfetti";
 import { formatFriendlyDateTime } from "../../utils/date";
 import { getStoredUserId } from "../../utils/userId";
 import { authHeaders } from "../../utils/auth";
+import { hapticMedium, hapticHeavy } from "../../utils/haptics";
+import { syncStreakProtection } from "../../utils/notifications";
 
 interface GrapesEntry {
   _id?: string;
@@ -147,11 +149,13 @@ const Grapes = () => {
         await fetchHistory();
         setShowSaveModal(false);
         showToast("Saved — nice work today 💜", "success");
-        if (completed) fireConfetti("big");
+        if (completed) { hapticMedium(); fireConfetti("big"); }
         if (data.leveledUp) {
+          hapticHeavy();
           showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
           fireConfetti("big");
         }
+        void syncStreakProtection(true);
         if (data.streakUpdated === false) {
           showToast("Entry saved, but your streak couldn't be updated right now.", "info");
         }

@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 /.claude
+/ios
 
 # Editor directories and files
 .vscode/*

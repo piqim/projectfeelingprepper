@@ -7,6 +7,8 @@ import { fireConfetti } from "../../hooks/useConfetti";
 import { formatFriendlyDateTime } from "../../utils/date";
 import { getStoredUserId } from "../../utils/userId";
 import { authHeaders } from "../../utils/auth";
+import { hapticMedium, hapticHeavy } from "../../utils/haptics";
+import { syncStreakProtection } from "../../utils/notifications";
 
 interface CogTriEntry {
   _id?: string;
@@ -194,11 +196,14 @@ const Cogtri = () => {
         await fetchHistory();
         setShowSaveModal(false);
         showToast("Saved — nice work today 💜", "success");
+        if (complete) hapticMedium();
         fireConfetti("small");
         if (data.leveledUp) {
+          hapticHeavy();
           showToast(`Level up! Your pet is now level ${data.newLevel}!`, "success");
           fireConfetti("big");
         }
+        void syncStreakProtection(true);
         if (data.streakUpdated === false) {
           showToast("Entry saved, but your streak couldn't be updated right now.", "info");
         }

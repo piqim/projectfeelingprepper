@@ -63,7 +63,10 @@ const App = () => {
   }
 
   return (
-    <div className="w-max-[530px] h-max-[930px] mx-auto bg-canvas">
+    <div
+      className="w-max-[530px] h-max-[930px] mx-auto bg-canvas"
+      style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <Navbar />
       <OfflineBanner visible={!isOnline} />
       <div key={location.pathname} className="fp-page">
