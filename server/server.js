@@ -10,9 +10,9 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
-    : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production'
+    ? [process.env.FRONTEND_URL, 'capacitor://localhost'].filter(Boolean)
+    : ['http://localhost:5173', 'capacitor://localhost'],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true
 };
