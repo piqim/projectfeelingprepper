@@ -10,15 +10,20 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="fixed w-full max-w-[530px] h-14 bg-dark shadow-md px-4 flex items-center justify-center z-50">
-        <Link
-          to="/"
-          className="text-xl font-bold montserrat-alternates text-highlight hover:text-accent-2 transition-colors duration-200"
-        >
-          FeelingPrepper
-        </Link>
+      <nav
+        className="fixed top-0 left-0 right-0 max-w-[530px] mx-auto bg-dark shadow-md z-50"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="h-14 px-4 flex items-center justify-center">
+          <Link
+            to="/"
+            className="text-xl font-bold montserrat-alternates text-highlight hover:text-accent-2 transition-colors duration-200"
+          >
+            FeelingPrepper
+          </Link>
+        </div>
       </nav>
-      <div className="h-14" />
+      <div style={{ height: 'calc(3.5rem + env(safe-area-inset-top))' }} />
     </>
   );
 };

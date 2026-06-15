@@ -60,6 +60,21 @@ interface CogTriEntry {
   date: string;
 }
 
+// Rotating welcome messages — a random one is shown each time the dashboard
+// mounts. Kept username-free so they work for any account.
+const WELCOME_MESSAGES = [
+  "Welcome back! 🌱",
+  "Good to see you 💜",
+  "How are you feeling today?",
+  "You showed up — that's what counts.",
+  "Take a breath. You've got this.",
+  "Glad you're here 🌞",
+  "Small steps, big progress.",
+  "One day at a time 🌿",
+  "Your feelings matter today.",
+  "Ready to check in?",
+];
+
 const Home = () => {
   const navigate = useNavigate();
   const { message, type, visible, showToast } = useToast();
@@ -76,6 +91,10 @@ const Home = () => {
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [feedAnim, setFeedAnim] = useState<"idle" | "feeding" | "done">("idle");
   const [isOfflineCache, setIsOfflineCache] = useState(false);
+  // Pick one welcome message per mount so it doesn't reshuffle on every re-render.
+  const [welcomeMessage] = useState(
+    () => WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]
+  );
   // Increments every minute so getDerivedPetStatus re-runs without a network call,
   // allowing the pet to flip happy → neutral at midnight automatically.
   const [, setTick] = useState(0);
@@ -505,7 +524,7 @@ const Home = () => {
   const cogtriTodayStatus = cogtriIsToday ? (latestCogTri?.complete ? "done" : "partial") : null;
 
   return (
-    <div className="bg-neutral p-4 pb-24 flex flex-col gap-4 relative">
+    <div className="bg-neutral p-4 pb-32 flex flex-col gap-4 relative">
       <Toast message={message} type={type} visible={visible} />
 
       {requiresPetSelection && (
@@ -559,7 +578,7 @@ const Home = () => {
       {/* Welcome Message */}
       <div className="montserrat-alternates mb-2">
         <h2 className="text-ink text-2xl font-bold min-[420px]:text-3xl min-[420px]:font-semibold tracking-wider text-center">
-          Welcome Back, {user.username}!
+          {welcomeMessage}
         </h2>
         {isOfflineCache && (
           <p className="text-xs font-semibold text-muted mt-0.5">

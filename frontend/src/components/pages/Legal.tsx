@@ -38,7 +38,7 @@ const Legal = () => {
   return (
     <div className="min-h-dvh bg-canvas flex flex-col">
       {/* Header */}
-      <div className="bg-primary-light px-4 py-3 flex items-center gap-3 flex-shrink-0">
+      <div className="bg-primary-light px-4 py-3 flex items-center gap-3 flex-shrink-0" style={{ paddingTop: 'calc(env(safe-area-inset-top) + 0.75rem)' }}>
         <button
           onClick={() => navigate(-1)}
           className="text-highlight p-1 rounded-lg hover:bg-white/20 transition-colors"
@@ -101,7 +101,7 @@ const Legal = () => {
       </div>
 
       {/* Footer note */}
-      <div className="px-4 py-3 bg-surface border-t border-line flex-shrink-0">
+      <div className="px-4 py-3 bg-surface border-t border-line flex-shrink-0" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}>
         <p className="text-xs text-muted text-center">
           Contact{" "}
           <span className="text-primary-light font-semibold">

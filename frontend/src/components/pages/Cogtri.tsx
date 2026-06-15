@@ -238,7 +238,7 @@ const Cogtri = () => {
   };
 
   return (
-    <div className="min-h-dvh bg-neutral flex flex-col pb-24">
+    <div className="min-h-dvh bg-neutral flex flex-col pb-32">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
       <div className="bg-primary-light p-4 text-center">

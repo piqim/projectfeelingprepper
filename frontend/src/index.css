@@ -66,6 +66,16 @@
   color-scheme: dark;
 }
 
+/* Hide scrollbars app-wide (scroll still works) — the visible bar is
+   distracting in the native WebView and Safari. */
+* {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* old Edge / IE */
+}
+*::-webkit-scrollbar {
+  display: none;                /* Safari / iOS WebView / Chrome */
+}
+
 .welcome {
   font-family: 'Montserrat', sans-serif;
 }

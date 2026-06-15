@@ -8,9 +8,8 @@ import { extractMongoId } from "../utils/userId";
 /**
  * Register — new account creation form.
  *
- * Username is capped at 5 characters at the input level (slice) and also
- * validated at submit (min 3). This is a product constraint — short usernames
- * fit the compact pet-stats bar in the Home dashboard without overflowing.
+ * Username requires a minimum of 3 characters (validated at submit); there is
+ * no maximum length.
  *
  * On success, stores the normalized userId and redirects to Home.
  */
@@ -60,14 +59,10 @@ const Register = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
-    // Enforce the 5-char username cap at the input level so the field never
-    // shows characters that will be rejected on submit.
-    const nextValue =
-      name === "username" && type !== "checkbox" ? value.slice(0, 5) : value;
 
     setFormData({
       ...formData,
-      [name]: type === "checkbox" ? checked : nextValue,
+      [name]: type === "checkbox" ? checked : value,
     });
     // Clear error when user starts typing
     if (error) setError("");
@@ -83,8 +78,8 @@ const Register = () => {
       return;
     }
 
-    if (formData.username.length < 3 || formData.username.length > 5) {
-      setError("Username must be 3-5 characters long");
+    if (formData.username.length < 3) {
+      setError("Username must be at least 3 characters long");
       return;
     }
 
@@ -230,9 +225,8 @@ const Register = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="3-5 characters"
+                placeholder="At least 3 characters"
                 minLength={3}
-                maxLength={5}
                 className="w-full px-4 py-3 border-2 border-line bg-surface-2 text-ink rounded-lg focus:border-primary-light focus:outline-none transition-colors"
                 disabled={loading}
               />

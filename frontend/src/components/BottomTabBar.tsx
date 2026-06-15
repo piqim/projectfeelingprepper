@@ -54,7 +54,10 @@ const BottomTabBar = () => {
   if (isAuthPage) return null;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 max-w-[530px] mx-auto bg-surface border-t-2 border-line flex z-50 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]">
+    <nav
+      className="fixed bottom-0 left-0 right-0 max-w-[530px] mx-auto bg-surface border-t-2 border-line flex z-50 shadow-[0_-2px_12px_rgba(0,0,0,0.06)]"
+      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) * 0.5)' }}
+    >
       {tabs.map((tab) => {
         const isActive =
           tab.to === "/" ? location.pathname === "/" : location.pathname.startsWith(tab.to);
@@ -76,7 +79,7 @@ const BottomTabBar = () => {
               {tab.label}
             </span>
             {isActive && (
-              <div className="absolute bottom-0 w-1 h-1 rounded-full bg-primary-light" />
+              <div className="w-1 h-1 rounded-full bg-primary-light" />
             )}
           </Link>
         );

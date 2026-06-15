@@ -195,7 +195,7 @@ const Grapes = () => {
   const filledCount = Object.values(entries).filter((val) => val.trim() !== "").length;
 
   return (
-    <div className="bg-neutral pb-24">
+    <div className="bg-neutral pb-32">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
       <div className="bg-primary-light p-4 text-center">
