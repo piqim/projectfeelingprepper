@@ -152,7 +152,7 @@ const Register = () => {
     <div
       className="min-h-dvh bg-gradient-to-br from-secondary to-primary-light flex items-center justify-center p-8"
       style={{
-        paddingTop: 'calc(env(safe-area-inset-top) + 2rem)',
+        paddingTop: 'calc(env(safe-area-inset-top) + 0.5rem)',
         paddingBottom: 'calc(env(safe-area-inset-bottom) + 2rem)',
       }}
     >
