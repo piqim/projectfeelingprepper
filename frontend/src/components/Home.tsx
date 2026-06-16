@@ -29,7 +29,7 @@ interface User {
   username: string;
   email: string;
   streak: number;
-  notifications?: boolean;
+  preferences?: { notifications?: boolean; theme?: string };
   petStats?: {
     type?: string | null;
     status: "happy" | "neutral" | "sad";
@@ -127,7 +127,7 @@ const Home = () => {
     const completedToday = (grapesIsToday && latestGrapes?.completed === true) || (cogtriIsToday && latestCogTri?.complete === true);
     // Mirror the server-side preference locally before scheduling so the
     // reminders honor whatever the user chose at signup or in Settings.
-    void setNotificationsEnabled(user?.notifications ?? true);
+    void setNotificationsEnabled(user?.preferences?.notifications ?? true);
     void setupDailyReminder();
     void syncStreakProtection(completedToday);
     void syncPetReminder(user?.petStats?.lastFed ?? null);

@@ -13,7 +13,6 @@ interface User {
   username: string;
   email: string;
   streak: number;
-  notifications?: boolean;
   petStats?: any;
   preferences?: any;
 }
@@ -66,7 +65,7 @@ const Settings = () => {
       if (response.ok) {
         const data = await response.json();
         setUser(data);
-        setNotifPref(data.notifications ?? true);
+        setNotifPref(data.preferences?.notifications ?? true);
         setFormData({
           username: data.username,
           email: data.email,

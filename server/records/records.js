@@ -347,13 +347,19 @@ router.post("/users", async (req, res) => {
 router.patch("/users/:id", authenticateToken, async (req, res) => {
   try {
     const updates = { $set: {} };
-    const allowedFields = ["username", "email", "preferences", "notifications"];
+    const allowedFields = ["username", "email", "preferences"];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         updates.$set[field] = req.body[field];
       }
     });
+
+    // Allow toggling just the notifications preference without clobbering the
+    // rest of `preferences` (e.g. theme), via a dot-path update.
+    if (req.body.notifications !== undefined) {
+      updates.$set["preferences.notifications"] = req.body.notifications;
+    }
 
     if (Object.keys(updates.$set).length === 0) {
       return res.status(400).json({ error: "No valid fields to update" });
