@@ -6,12 +6,14 @@ import { useToast } from "../../hooks/useToast";
 import { useTheme, type Theme } from "../../hooks/useTheme";
 import { getStoredUserId } from "../../utils/userId";
 import { authHeaders, clearAuthStorage } from "../../utils/auth";
+import { setNotificationsEnabled, setupDailyReminder, syncReEngagementReminder } from "../../utils/notifications";
 
 interface User {
   _id: string;
   username: string;
   email: string;
   streak: number;
+  notifications?: boolean;
   petStats?: any;
   preferences?: any;
 }
@@ -24,6 +26,8 @@ const Settings = () => {
   // User data
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifPref, setNotifPref] = useState(true);
+  const [savingNotif, setSavingNotif] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -62,6 +66,7 @@ const Settings = () => {
       if (response.ok) {
         const data = await response.json();
         setUser(data);
+        setNotifPref(data.notifications ?? true);
         setFormData({
           username: data.username,
           email: data.email,
@@ -166,6 +171,39 @@ const Settings = () => {
       }
     } catch {
       setError("An error occurred. Please try again.");
+    }
+  };
+
+  // Toggle the notifications preference. Persists to the server, mirrors it
+  // locally for the scheduler, and immediately cancels or (re)schedules
+  // reminders so the change takes effect without waiting for the next app open.
+  const handleToggleNotifications = async (next: boolean) => {
+    const userId = getStoredUserId();
+    if (!userId || savingNotif) return;
+
+    setSavingNotif(true);
+    setNotifPref(next); // optimistic
+
+    try {
+      const response = await fetch(`${API_URL}/users/${userId}`, {
+        method: "PATCH",
+        headers: authHeaders(),
+        body: JSON.stringify({ notifications: next }),
+      });
+
+      if (!response.ok) throw new Error("save failed");
+
+      await setNotificationsEnabled(next);
+      if (next) {
+        void setupDailyReminder();
+        void syncReEngagementReminder();
+      }
+      showToast(next ? "Notifications enabled" : "Notifications disabled", "success");
+    } catch {
+      setNotifPref(!next); // revert on failure
+      showToast("Failed to update notifications. Please try again.", "error");
+    } finally {
+      setSavingNotif(false);
     }
   };
 
@@ -319,6 +357,35 @@ const Settings = () => {
               {opt}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="px-6 mt-6">
+        <p className="text-sm font-bold text-ink mb-2">Notifications</p>
+        <div className="flex items-center justify-between bg-surface-2 rounded-xl p-4">
+          <div className="pr-4">
+            <p className="text-sm font-semibold text-ink">Daily reminders</p>
+            <p className="text-xs text-muted mt-0.5">
+              Check-in nudges, streak protection, and pet reminders.
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={notifPref}
+            disabled={savingNotif}
+            onClick={() => handleToggleNotifications(!notifPref)}
+            className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+              notifPref ? "bg-primary-light" : "bg-line"
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                notifPref ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
         </div>
       </div>
 

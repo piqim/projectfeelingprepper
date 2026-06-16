@@ -9,7 +9,7 @@ import { extractMongoId, getStoredUserId } from "../utils/userId";
 import { authHeaders, clearAuthStorage } from "../utils/auth";
 import { LEVEL_THRESHOLDS, MAX_LEVEL, isSameUTCDay, getDerivedPetStatus } from "../utils/pet";
 import { hapticLight, hapticHeavy } from "../utils/haptics";
-import { setupDailyReminder, syncStreakProtection } from "../utils/notifications";
+import { setupDailyReminder, syncStreakProtection, syncPetReminder, celebrateStreakMilestone, syncReEngagementReminder, setNotificationsEnabled } from "../utils/notifications";
 import PetCharacter from "./pet/PetCharacter";
 import PetPreview from "./pet/PetPreview";
 import Toast from "./Toast";
@@ -29,6 +29,7 @@ interface User {
   username: string;
   email: string;
   streak: number;
+  notifications?: boolean;
   petStats?: {
     type?: string | null;
     status: "happy" | "neutral" | "sad";
@@ -124,9 +125,15 @@ const Home = () => {
     const grapesIsToday = latestGrapes?.date ? isSameUTCDay(new Date(latestGrapes.date), new Date()) : false;
     const cogtriIsToday = latestCogTri?.date ? isSameUTCDay(new Date(latestCogTri.date), new Date()) : false;
     const completedToday = (grapesIsToday && latestGrapes?.completed === true) || (cogtriIsToday && latestCogTri?.complete === true);
+    // Mirror the server-side preference locally before scheduling so the
+    // reminders honor whatever the user chose at signup or in Settings.
+    void setNotificationsEnabled(user?.notifications ?? true);
     void setupDailyReminder();
     void syncStreakProtection(completedToday);
-  }, [loading, latestGrapes, latestCogTri]);
+    void syncPetReminder(user?.petStats?.lastFed ?? null);
+    void celebrateStreakMilestone(user?.streak ?? 0);
+    void syncReEngagementReminder();
+  }, [loading, latestGrapes, latestCogTri, user]);
 
   /** Returns true when the user has an actual pet type set (non-empty string). */
   const hasPetType = (type?: string | null) => {

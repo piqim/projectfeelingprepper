@@ -89,7 +89,7 @@ IMPORTANT HIPAA NOTICE: FeelingPrepper is NOT a covered entity under the Health 
   - Access controls and authentication requirements for database access
   - Regular review of our security practices
 
-4.3 No Absolute Security. While we take reasonable steps to protect your information, no method of transmission over the internet or method of electronic storage is 100% secure. We cannot guarantee absolute security of your data. If you become aware of any security breach affecting your account, please notify us immediately at mbinburhanuddin@ucsd.edu.
+4.3 No Absolute Security. While we take reasonable steps to protect your information, no method of transmission over the internet or method of electronic storage is 100% secure. We cannot guarantee absolute security of your data. If you become aware of any security breach affecting your account, please notify us immediately at mbinburhanuddin@gmail.com.
 
 4.4 Data Retention. We retain your personal information and wellness data for as long as your account is active. Upon account deletion:
   - Your account information and all associated wellness data will be permanently deleted from our primary database
@@ -137,9 +137,9 @@ We may share your information only in the following limited and specific circums
   - The right to opt out of the sale of your personal information (we do not sell personal information)
   - The right to non-discrimination for exercising your privacy rights
 
-  To exercise your California privacy rights, please contact us at mbinburhanuddin@ucsd.edu.
+  To exercise your California privacy rights, please contact us at mbinburhanuddin@gmail.com.
 
-6.6 European / EEA Residents (GDPR). If you are located in the European Economic Area, you may have additional rights under the General Data Protection Regulation (GDPR), including the right to access, rectify, erase, restrict, or port your personal data, and to object to certain processing. To exercise these rights, please contact us at mbinburhanuddin@ucsd.edu.
+6.6 European / EEA Residents (GDPR). If you are located in the European Economic Area, you may have additional rights under the General Data Protection Regulation (GDPR), including the right to access, rectify, erase, restrict, or port your personal data, and to object to certain processing. To exercise these rights, please contact us at mbinburhanuddin@gmail.com.
 
   Our lawful bases for processing your personal data are:
   - Performance of a contract (providing the application services you signed up for)
@@ -150,7 +150,7 @@ We may share your information only in the following limited and specific circums
 7. CHILDREN'S PRIVACY
 ================================================================================
 
-FeelingPrepper is not directed to children under 13 years of age, and we do not knowingly collect personal information from children under 13. If you are a parent or legal guardian and believe that your child under 13 has provided us with personal information without your consent, please contact us immediately at mbinburhanuddin@ucsd.edu. We will take prompt steps to delete such information from our systems.
+FeelingPrepper is not directed to children under 13 years of age, and we do not knowingly collect personal information from children under 13. If you are a parent or legal guardian and believe that your child under 13 has provided us with personal information without your consent, please contact us immediately at mbinburhanuddin@gmail.com. We will take prompt steps to delete such information from our systems.
 
 ================================================================================
 8. THIRD-PARTY LINKS AND RESOURCES

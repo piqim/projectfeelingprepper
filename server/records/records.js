@@ -347,7 +347,7 @@ router.post("/users", async (req, res) => {
 router.patch("/users/:id", authenticateToken, async (req, res) => {
   try {
     const updates = { $set: {} };
-    const allowedFields = ["username", "email", "preferences"];
+    const allowedFields = ["username", "email", "preferences", "notifications"];
 
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
