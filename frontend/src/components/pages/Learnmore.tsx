@@ -10,6 +10,52 @@ const Learnmore = () => {
 
       {/* Info Cards Section */}
       <div className="px-6 py-6 space-y-6">
+        {/* Crisis Resources Card — surfaced first so help is never buried. */}
+        <div className="bg-red-50 dark:bg-red-500/10 rounded-2xl shadow-md border-4 border-red-400 dark:border-red-500/40 p-6">
+          <div className="flex gap-3 mb-3 justify-center items-center">
+            <div className="bg-red-500 rounded-full w-12 h-12 flex items-center justify-center flex-shrink-0">
+              <span className="text-2xl">🆘</span>
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-bold text-ink mb-1 montserrat-alternates">
+                In Crisis? Get Help Now
+              </h2>
+            </div>
+          </div>
+          <p className="text-base font-semibold text-ink leading-relaxed mb-4">
+            FeelingPrepper is a self-help tool, not a substitute for professional
+            care. If you are in emotional distress or thinking about self-harm,
+            please reach out right away — you deserve support.
+          </p>
+          <div className="space-y-2">
+            <a
+              href="tel:988"
+              className="flex items-center justify-between bg-surface rounded-xl p-3 font-semibold text-ink hover:bg-surface-2 transition-colors"
+            >
+              <span>📞 988 — Suicide &amp; Crisis Lifeline</span>
+              <span className="text-primary-light text-sm">Call</span>
+            </a>
+            <a
+              href="sms:741741?body=HOME"
+              className="flex items-center justify-between bg-surface rounded-xl p-3 font-semibold text-ink hover:bg-surface-2 transition-colors"
+            >
+              <span>💬 Text HOME to 741741</span>
+              <span className="text-primary-light text-sm">Text</span>
+            </a>
+            <a
+              href="tel:911"
+              className="flex items-center justify-between bg-surface rounded-xl p-3 font-semibold text-ink hover:bg-surface-2 transition-colors"
+            >
+              <span>🚨 911 — Emergency</span>
+              <span className="text-primary-light text-sm">Call</span>
+            </a>
+          </div>
+          <p className="text-xs text-muted mt-3 leading-relaxed">
+            988 and 911 are US numbers. If you are outside the US, contact your
+            local emergency services or a crisis line in your country.
+          </p>
+        </div>
+
         {/* GRAPES Card */}
         <div className="bg-surface rounded-2xl shadow-md border-4 border-secondary p-6">
           <div className="flex gap-3 mb-3 justify-center items-center">
