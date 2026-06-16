@@ -1,0 +1,99 @@
+  App Name (30 char max)
+
+  FeelingPrepper
+
+  Subtitle (30 char max)
+
+  CBT journaling & mood habits
+
+  Promotional Text (170 char max — editable anytime without review)
+
+  Build healthy daily habits with two proven CBT tools — GRAPES and
+  the Cognitive Triangle. Track your mood, keep your streak, and
+  grow your companion.
+
+  Description
+
+  FeelingPrepper is a personal mental-wellness journaling app that
+  helps you build healthy daily habits using two evidence-based CBT
+  (Cognitive Behavioral Therapy) tools. Whether you're managing
+  stress, low mood, or just want to stay grounded, FeelingPrepper
+  gives you a simple, private space to check in with yourself every
+  day.
+
+  WHAT YOU'LL DO
+
+  • GRAPES — Behavioral activation made simple. Log one small
+  activity across six categories (Gentle with yourself, Relaxation,
+  Accomplishment, Pleasure, Exercise, and Social) to build momentum
+  and beat low mood.
+
+  • Cognitive Triangle — Reframe unhelpful thinking. Tap into the
+  connection between your Thoughts, Feelings, and Behaviors to
+  understand patterns and respond differently.
+
+  • Daily check-ins — A quick, judgment-free space to reflect on how
+  you're doing.
+
+  STAY MOTIVATED
+
+  Progress is gamified with a daily streak and a pet companion that
+  grows alongside your habits. Small steps, every day, add up.
+
+  PRIVATE BY DESIGN
+
+  Your journal is yours. All entries are your own private content.
+  Manage everything from Settings:
+  • Export your data anytime as a CSV file
+  • Permanently delete your account and all data, right inside the
+  app
+  • Local-only reminders — no tracking, no ads
+
+  THOUGHTFUL REMINDERS
+
+  Optional local notifications nudge you for daily check-ins,
+  streaks, milestones, and your companion — all toggleable in
+  Settings. No spam.
+
+  IMPORTANT
+
+  FeelingPrepper is a self-help wellness tool. It is not a medical
+  device and is not a substitute for professional care, diagnosis,
+  or treatment. If you are in crisis, in-app resources include 988
+  (Suicide & Crisis Lifeline), the Crisis Text Line, and 911.
+
+  Start small. Feel prepared.
+
+  Keywords (100 char max, comma-separated, no spaces)
+
+  cbt,mood,journal,mental
+  health,wellness,anxiety,habit,gratitude,self
+  care,mindful,therapy,tracker
+
+  Support URL
+
+  https://projectfeelingprepper.vercel.app
+  (Apple requires a working support URL with a way to contact you —
+  your /legal page works, but a page that surfaces the support email
+  mbinburhanuddin@gmail.com is ideal.)
+  
+  Privacy Policy URL
+
+  https://projectfeelingprepper.vercel.app/legal
+
+  ---
+  A couple of App Review tips specific to this listing:
+  - Category: Set primary to Health & Fitness (more accurate for a
+  CBT/mental-health app and where reviewers expect it). Your plist
+  currently says lifestyle — the App Store Connect category
+  overrides that, so pick Health & Fitness there.
+  - Age rating: Expect to mark it 17+ or fill out the questionnaire
+  honestly re: "Medical/Treatment Information." Mental-health apps
+  often trigger this; being accurate avoids rejection.
+  - Avoid clinical claims like "treats depression/anxiety" in the
+  copy — I kept it to "manage stress/low mood" and "evidence-based,"
+  which is the safe framing. ✅
+  
+  Want me to open Signing & Capabilities guidance step-by-step once
+  you've decided the Apple ID, or adjust the description tone (more
+  clinical vs. more friendly)?

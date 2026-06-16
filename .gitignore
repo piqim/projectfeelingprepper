@@ -1,5 +1,7 @@
 # environment variables
 /DEPLOYMENT.md
+/appreviewer.md
+/Instructions to publish on app store.md
 server/.env
 server/.env.local
 server/.env.*local
