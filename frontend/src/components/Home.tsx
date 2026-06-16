@@ -712,7 +712,7 @@ const Home = () => {
       {/* TODAY'S GRAPES CARD */}
       <div className="bg-secondary/60 dark:bg-secondary/20 rounded-2xl px-5 py-5 flex items-start fp-card">
         {/* Left Section */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="montserrat-alternates text-ink text-2xl min-[410px]:text-3xl font-semibold">
@@ -771,10 +771,10 @@ const Home = () => {
         </div>
 
         {/* Divider Line */}
-        <div className="w-[2px] h-24 bg-ink/10 mx-4"></div>
+        <div className="w-[2px] h-24 bg-ink/20 mx-4 shrink-0"></div>
 
         {/* Right Section */}
-        <div className="flex flex-col items-center justify-center self-stretch">
+        <div className="flex flex-col items-center justify-center self-stretch shrink-0">
           {/* Grape Icon */}
           <Link to="/grapes" aria-label="Open GRAPES">
             <svg
@@ -799,7 +799,7 @@ const Home = () => {
       {/* LAST COG TRI CARD */}
       <div className="bg-primary-light/40 dark:bg-primary-light/20 rounded-2xl px-5 py-5 flex items-start fp-card">
         {/* Left Section */}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="montserrat-alternates text-ink text-2xl min-[410px]:text-3xl font-semibold">
@@ -851,16 +851,17 @@ const Home = () => {
         </div>
 
         {/* Divider Line */}
-        <div className="w-[2px] h-24 bg-ink/10 mx-4"></div>
+        <div className="w-[2px] h-24 bg-ink/20 mx-4 shrink-0"></div>
 
         {/* Right Section */}
-        <div className="flex flex-col items-center justify-center self-stretch">
-          {/* Triangle Icon */}
+        <div className="flex flex-col items-center justify-center self-stretch shrink-0">
+          {/* Triangle Icon — navy (matches the card's text) so it stays
+              visible against the teal card instead of blending in. */}
           <Link to="/cogtri" aria-label="Open CogTri">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 64 64"
-              fill="#0281A7"
+              fill="#222089"
               className="w-16 h-16"
             >
               <polygon points="32,15 8,52 56,52" />
