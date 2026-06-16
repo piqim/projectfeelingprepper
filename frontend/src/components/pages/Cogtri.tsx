@@ -241,11 +241,12 @@ const Cogtri = () => {
     <div className="min-h-dvh bg-neutral flex flex-col pb-32">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
-      <div className="bg-primary-light p-4 text-center">
+      {/*<div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
           CogTri
         </h1>
-      </div>
+      </div>*/}
+
       {/* CogTri Section */}
       <div className="bg-primary-base px-4 pt-4 pb-10">
 

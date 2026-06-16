@@ -198,12 +198,12 @@ const Grapes = () => {
     <div className="bg-neutral pb-32">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
-      <div className="bg-primary-light p-4 text-center">
+      {/*<div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
           GRAPES Daily Tracker
         </h1>
-      </div>
-
+      </div>*/}
+      
       {/* Progress hint */}
       <div className="px-5 mt-4 flex items-center justify-between">
         <p className="text-sm font-semibold text-ink/60">Fill in today's activities</p>

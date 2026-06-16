@@ -278,11 +278,11 @@ const Settings = () => {
     <div className="min-h-dvh bg-neutral flex flex-col pb-32">
       <Toast message={message} type={type} visible={visible} />
       {/* Header */}
-      <div className="bg-primary-light p-4 text-center">
+      {/*<div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
           Settings ⚙️
         </h1>
-      </div>
+      </div>*/}
 
       {/* User Info Card */}
       <div className="bg-surface p-4">

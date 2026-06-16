@@ -2,11 +2,11 @@ const Learnmore = () => {
   return (
     <div className="min-h-dvh bg-neutral pb-32">
       {/* Header */}
-      <div className="bg-primary-light p-4 text-center">
+      {/*<div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">
           Learn More
         </h1>
-      </div>
+      </div>*/}
 
       {/* Info Cards Section */}
       <div className="px-6 py-6 space-y-6">
@@ -109,16 +109,10 @@ const Learnmore = () => {
         </h2>
         <div className="bg-highlight dark:bg-surface font-semibold text-lg p-6">
           <p className="text-ink leading-relaxed mb-4">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim
-            ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut
-            aliquip ex ea commodo consequat.
+            My name is Piqim, and I am a software developer with a passion for mental health and well-being. I created this app to provide a simple, engaging way for people to practice evidence-based techniques like GRAPES and the Cognitive Triangle in their daily lives. My hope is that by making these tools more accessible and fun, I can help others improve their mental health and find moments of joy and accomplishment every day.
           </p>
           <p className="text-ink leading-relaxed">
-            Duis aute irure dolor in reprehenderit in voluptate velit esse
-            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-            cupidatat non proident, sunt in culpa qui officia deserunt mollit
-            anim id est laborum.
+            I started planning the development of the app in early September of 2025, along with my friends and I. The idea stemmed from therapist, Dr. Hyke whom suggested me to practice GRAPES and the Cognitive Triangle in my daily life to help with my mental health. I found it difficult to keep up with the practices, and thus I wanted to create an app that would make it easier and more enjoyable for myself and others to stay consistent with these techniques.
           </p>
         </div>
       </div>
@@ -130,8 +124,7 @@ const Learnmore = () => {
         </h2>
         <div className="font-semibold text-lg mb-4">
           <p className="text-ink leading-relaxed">
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do
-            eiusmod tempor incididunt ut labore et dolore magna aliqua.
+            These are the friends, and family who have contributed to the development of this app in various ways, from coding and design to research and content creation. I am incredibly grateful for their support and expertise, which have been invaluable in bringing this project to life.
           </p>
         </div>
 

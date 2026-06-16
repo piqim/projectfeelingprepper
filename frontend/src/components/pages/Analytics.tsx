@@ -90,10 +90,10 @@ const Analytics = () => {
   return (
     <div className="min-h-dvh bg-neutral flex flex-col pb-24">
       {/* Header */}
-      <div className="bg-primary-light p-4 text-center">
+      {/*<div className="bg-primary-light p-4 text-center">
         <h1 className="text-2xl font-bold text-highlight montserrat-alternates">Analytics</h1>
         <p className="text-sm text-highlight/80 mt-1">Your progress at a glance</p>
-      </div>
+      </div>*/}
 
       <div className="flex flex-col gap-4 p-4">
       {!hasAnyData ? (
