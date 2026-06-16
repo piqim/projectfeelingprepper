@@ -2,6 +2,7 @@
 /DEPLOYMENT.md
 /appreviewer.md
 /Instructions to publish on app store.md
+/ADS_INTEGRATION_PLAN.md
 server/.env
 server/.env.local
 server/.env.*local
